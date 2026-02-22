@@ -18,7 +18,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.streamplayer.app.databinding.ActivityMainBinding
-import com.streamplayer.app.repository.StreamRepository
 import com.streamplayer.app.service.AudioServiceConnection
 import com.streamplayer.app.service.AudioStreamService
 import com.streamplayer.app.ui.MainViewModel
@@ -71,12 +70,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             registerReceiver(stateReceiver, filter)
         }
-        // Auto-start the service if the user had previously started playback.
-        // Handles: app killed by Samsung battery optimizer, process death, cold launch.
-        // The service skips play() if the player is already active, so this is safe.
-        if (StreamRepository(this).isUserWantsPlaying()) {
-            AudioServiceConnection.startPlay(this)
-        }
+        // Always start the service when the app is opened.
+        // The service guards against interrupting an already-active stream (alreadyActive check),
+        // so this is safe even if it is called multiple times.
+        // This covers: cold launch, kill by Samsung, process death, return from background.
+        AudioServiceConnection.startPlay(this)
     }
 
     override fun onPause() {
