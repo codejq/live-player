@@ -62,6 +62,7 @@ class AudioStreamService : LifecycleService() {
     private val handler = Handler(Looper.getMainLooper())
     private var retryCount = 0
     private var isIntentionallyStopped = false
+    private var isRestarting = false   // true while play() transitions stop→prepare; suppresses STATE_IDLE retry
     private var noisyRegistered = false
 
     // ─────────────────────────────────────────────
@@ -199,11 +200,16 @@ class AudioStreamService : LifecycleService() {
             .setUri(config.url)
             .setLiveConfiguration(
                 MediaItem.LiveConfiguration.Builder()
-                    .setMaxPlaybackSpeed(1f)   // no speed-up to catch up to live edge
-                    .setMinPlaybackSpeed(1f)   // no slow-down
+                    .setMaxPlaybackSpeed(1f)
+                    .setMinPlaybackSpeed(1f)
                     .build()
             )
             .build()
+
+        // Set flag BEFORE stop() so the STATE_IDLE callback that fires during stop()
+        // is ignored by the player listener — otherwise it schedules a retry that
+        // interrupts the stream ~5s later.
+        isRestarting = true
         player.stop()
         player.clearMediaItems()
         player.setMediaItem(mediaItem)
@@ -230,10 +236,19 @@ class AudioStreamService : LifecycleService() {
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
             when (state) {
-                Player.STATE_IDLE, Player.STATE_ENDED -> {
+                Player.STATE_IDLE -> {
+                    // Fired by player.stop() inside play() — do NOT retry here.
+                    // isRestarting suppresses spurious retries during stop→prepare.
+                    // Real errors are handled by onPlayerError below.
+                }
+                Player.STATE_ENDED -> {
+                    // Live streams should never end, but retry if they do.
+                    isRestarting = false
                     if (!isIntentionallyStopped) scheduleRetry()
                 }
                 Player.STATE_BUFFERING -> {
+                    // Reached BUFFERING: stop→prepare transition is complete.
+                    isRestarting = false
                     updateNotification(isPlaying = false)
                     broadcastState(isPlaying = false, isConnecting = true)
                 }
@@ -242,6 +257,7 @@ class AudioStreamService : LifecycleService() {
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            isRestarting = false
             if (!isIntentionallyStopped) {
                 updateNotification(isPlaying = false)
                 broadcastState(isPlaying = false)
