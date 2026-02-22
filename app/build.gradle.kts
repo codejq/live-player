@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.workmanager)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.runtime)
+    implementation(libs.lifecycle.service)   // LifecycleService base class
     implementation(libs.coroutines.android)
     implementation(libs.appcompat)
     implementation(libs.material)
