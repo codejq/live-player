@@ -13,7 +13,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -28,11 +27,7 @@ import com.streamplayer.app.notification.NotificationHelper
 import com.streamplayer.app.receiver.BecomingNoisyReceiver
 import com.streamplayer.app.receiver.NetworkReceiver
 import com.streamplayer.app.repository.StreamRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 /**
@@ -63,9 +58,6 @@ class AudioStreamService : LifecycleService() {
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var networkReceiver: NetworkReceiver
     private lateinit var noisyReceiver: BecomingNoisyReceiver
-
-    // Shared OkHttp client — used both for ExoPlayer data source and redirect resolution
-    private lateinit var okHttpClient: OkHttpClient
 
     private val handler = Handler(Looper.getMainLooper())
     private var retryCount = 0
@@ -113,6 +105,7 @@ class AudioStreamService : LifecycleService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        // Schedule restart 1 second after user swipes app from recents
         if (!isIntentionallyStopped) {
             val restart = Intent(this, AudioStreamService::class.java).apply {
                 action = ACTION_PLAY
@@ -143,9 +136,9 @@ class AudioStreamService : LifecycleService() {
     // ─────────────────────────────────────────────
 
     private fun buildPlayer() {
-        okHttpClient = OkHttpClient.Builder()
+        val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS)   // 0 = infinite — live streams never finish
+            .readTimeout(0, TimeUnit.SECONDS)   // 0 = infinite — live streams never "finish" sending
             .build()
 
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
@@ -155,13 +148,13 @@ class AudioStreamService : LifecycleService() {
             .setBufferDurationsMs(
                 15_000,  // min buffer to maintain during playback
                 30_000,  // max buffer ceiling
-                2_000,   // start playing after just 2s
+                2_000,   // start playing after just 2s — don't wait for large pre-fill
                 5_000    // resume after rebuffer once 5s is available
             )
             .build()
 
         player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))  // actually use OkHttp!
             .setLoadControl(loadControl)
             .build()
             .also { exo ->
@@ -172,79 +165,25 @@ class AudioStreamService : LifecycleService() {
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                         .build(),
-                    true  // handleAudioFocus = true
+                    true  // handleAudioFocus = true (auto duck/pause/resume)
                 )
             }
-    }
-
-    // ─────────────────────────────────────────────
-    // Redirect Resolution
-    // ─────────────────────────────────────────────
-
-    /**
-     * Follows HTTP redirects on a background thread (exactly like a browser).
-     * If the server redirects to a new URL (e.g. fresh Radiojar token), the
-     * new URL is saved to SharedPreferences so future reconnects use it too.
-     *
-     * Uses a short readTimeout so we don't wait for the audio body — we only
-     * need the final URL from the response headers, then close the connection.
-     */
-    private suspend fun resolveRedirect(url: String): String = withContext(Dispatchers.IO) {
-        try {
-            val resolveClient = okHttpClient.newBuilder()
-                .readTimeout(10, TimeUnit.SECONDS)  // short timeout — just need headers
-                .build()
-
-            val request = Request.Builder()
-                .url(url)
-                .header("Icy-MetaData", "1")        // request ICY metadata like a radio player
-                .header("User-Agent", "StreamPlayer/1.0 (Android)")
-                .build()
-
-            resolveClient.newCall(request).execute().use { response ->
-                // response.request is the FINAL request after all redirects
-                val finalUrl = response.request.url.toString()
-                if (finalUrl != url) {
-                    // Server redirected us — save fresh URL so retries also use it
-                    val updatedConfig = config.copy(url = finalUrl)
-                    StreamRepository(this@AudioStreamService).save(updatedConfig)
-                    config = updatedConfig
-                }
-                finalUrl
-            }
-        } catch (e: Exception) {
-            url  // network error during resolution — fall back to original URL
-        }
     }
 
     // ─────────────────────────────────────────────
     // Playback Control
     // ─────────────────────────────────────────────
 
-    /**
-     * Async: resolves any redirect first, then starts ExoPlayer on the main thread.
-     */
     private fun play() {
         config = StreamRepository(this).load()
         handler.removeCallbacksAndMessages(null)
-        updateNotification(isPlaying = false)
-        broadcastState(isPlaying = false, isConnecting = true)
 
-        lifecycleScope.launch {
-            val resolvedUrl = resolveRedirect(config.url)
-            if (!isIntentionallyStopped) {
-                startExoPlayback(resolvedUrl)
-            }
-        }
-    }
-
-    private fun startExoPlayback(url: String) {
         val mediaItem = MediaItem.Builder()
-            .setUri(url)
+            .setUri(config.url)
             .setLiveConfiguration(
                 MediaItem.LiveConfiguration.Builder()
-                    .setMaxPlaybackSpeed(1f)
-                    .setMinPlaybackSpeed(1f)
+                    .setMaxPlaybackSpeed(1f)   // no speed-up to catch up to live edge
+                    .setMinPlaybackSpeed(1f)   // no slow-down
                     .build()
             )
             .build()
@@ -253,7 +192,10 @@ class AudioStreamService : LifecycleService() {
         player.setMediaItem(mediaItem)
         player.prepare()
         player.play()
+
         registerNoisyReceiver()
+        updateNotification(isPlaying = false)
+        broadcastState(isPlaying = false, isConnecting = true)
     }
 
     private fun stopPlayback() {
@@ -307,6 +249,7 @@ class AudioStreamService : LifecycleService() {
             return
         }
         retryCount++
+        // Exponential: delay * 2^(retryCount-1), capped at 60s
         val baseMs = config.reconnectDelaySeconds * 1_000L
         val delay = (baseMs * (1L shl minOf(retryCount - 1, 5))).coerceAtMost(60_000L)
         handler.postDelayed({ play() }, delay)
@@ -341,6 +284,7 @@ class AudioStreamService : LifecycleService() {
 
     private fun registerNetworkReceiver() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            // For API 24+, dynamic registration (manifest registration is no-op on 24+)
             networkReceiver = NetworkReceiver()
             @Suppress("DEPRECATION")
             val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
