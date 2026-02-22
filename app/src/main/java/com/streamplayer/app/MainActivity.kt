@@ -35,8 +35,9 @@ class MainActivity : AppCompatActivity() {
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val isPlaying = intent.getBooleanExtra(AudioStreamService.EXTRA_IS_PLAYING, false)
+            val isConnecting = intent.getBooleanExtra(AudioStreamService.EXTRA_IS_CONNECTING, false)
             val name = intent.getStringExtra(AudioStreamService.EXTRA_STREAM_NAME)
-            viewModel.updatePlayingState(isPlaying)
+            viewModel.updatePlayingState(isPlaying, isConnecting)
             name?.let { viewModel.updateStreamName(it) }
         }
     }
@@ -95,25 +96,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeViewModel() {
-        viewModel.isPlaying.observe(this) { isPlaying ->
-            updatePlaybackUI(isPlaying)
-        }
+        viewModel.isPlaying.observe(this) { _ -> refreshUI() }
+        viewModel.isConnecting.observe(this) { _ -> refreshUI() }
         viewModel.streamName.observe(this) { name ->
             binding.tvStreamName.text = name
         }
     }
 
-    private fun updatePlaybackUI(isPlaying: Boolean) {
-        binding.tvStatus.text = if (isPlaying) {
-            getString(R.string.status_playing)
-        } else {
-            getString(R.string.status_stopped)
+    private fun refreshUI() {
+        val isPlaying = viewModel.isPlaying.value == true
+        val isConnecting = viewModel.isConnecting.value == true
+        binding.tvStatus.text = when {
+            isPlaying    -> getString(R.string.status_playing)
+            isConnecting -> getString(R.string.status_connecting)
+            else         -> getString(R.string.status_stopped)
         }
         binding.statusIndicator.setBackgroundResource(
             if (isPlaying) R.drawable.indicator_active else R.drawable.indicator_inactive
         )
-        binding.btnPlay.isEnabled = !isPlaying
-        binding.btnStop.isEnabled = isPlaying
+        binding.btnPlay.isEnabled = !isPlaying && !isConnecting
+        binding.btnStop.isEnabled = isPlaying || isConnecting
     }
 
     // ─────────────────────────────────────────────

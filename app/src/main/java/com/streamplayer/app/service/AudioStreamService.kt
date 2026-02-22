@@ -48,6 +48,7 @@ class AudioStreamService : LifecycleService() {
         // Broadcast action to update UI
         const val ACTION_STATE_CHANGED = "com.streamplayer.STATE_CHANGED"
         const val EXTRA_IS_PLAYING = "is_playing"
+        const val EXTRA_IS_CONNECTING = "is_connecting"
         const val EXTRA_STREAM_NAME = "stream_name"
     }
 
@@ -183,8 +184,8 @@ class AudioStreamService : LifecycleService() {
         player.play()
 
         registerNoisyReceiver()
-        updateNotification(isPlaying = true)
-        broadcastState(isPlaying = true)
+        updateNotification(isPlaying = false)
+        broadcastState(isPlaying = false, isConnecting = true)
     }
 
     private fun stopPlayback() {
@@ -207,7 +208,7 @@ class AudioStreamService : LifecycleService() {
                 }
                 Player.STATE_BUFFERING -> {
                     updateNotification(isPlaying = false)
-                    broadcastState(isPlaying = false)
+                    broadcastState(isPlaying = false, isConnecting = true)
                 }
                 Player.STATE_READY -> { /* handled by onIsPlayingChanged */ }
             }
@@ -257,9 +258,10 @@ class AudioStreamService : LifecycleService() {
     // Broadcast state to UI
     // ─────────────────────────────────────────────
 
-    private fun broadcastState(isPlaying: Boolean) {
+    private fun broadcastState(isPlaying: Boolean, isConnecting: Boolean = false) {
         val intent = Intent(ACTION_STATE_CHANGED).apply {
             putExtra(EXTRA_IS_PLAYING, isPlaying)
+            putExtra(EXTRA_IS_CONNECTING, isConnecting)
             putExtra(EXTRA_STREAM_NAME, config.name)
             `package` = packageName
         }

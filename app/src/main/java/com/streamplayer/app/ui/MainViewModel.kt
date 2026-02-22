@@ -18,6 +18,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isPlaying = MutableLiveData(false)
     val isPlaying: LiveData<Boolean> = _isPlaying
 
+    private val _isConnecting = MutableLiveData(false)
+    val isConnecting: LiveData<Boolean> = _isConnecting
+
     private val _streamName = MutableLiveData<String>()
     val streamName: LiveData<String> = _streamName
 
@@ -34,8 +37,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _streamName.value = cfg.name
     }
 
-    fun updatePlayingState(playing: Boolean) {
+    fun updatePlayingState(playing: Boolean, connecting: Boolean = false) {
         _isPlaying.value = playing
+        _isConnecting.value = connecting
     }
 
     fun updateStreamName(name: String) {
