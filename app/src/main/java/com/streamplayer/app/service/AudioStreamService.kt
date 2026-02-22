@@ -21,6 +21,7 @@ import androidx.media3.common.Player
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.streamplayer.app.model.StreamConfig
 import com.streamplayer.app.notification.NotificationHelper
 import com.streamplayer.app.receiver.BecomingNoisyReceiver
@@ -137,11 +138,11 @@ class AudioStreamService : LifecycleService() {
     private fun buildPlayer() {
         val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
+            .readTimeout(0, TimeUnit.SECONDS)   // 0 = infinite — live streams never "finish" sending
             .build()
 
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+            .setUserAgent("StreamPlayer/1.0 (Android)")
 
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
@@ -153,6 +154,7 @@ class AudioStreamService : LifecycleService() {
             .build()
 
         player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))  // actually use OkHttp!
             .setLoadControl(loadControl)
             .build()
             .also { exo ->
