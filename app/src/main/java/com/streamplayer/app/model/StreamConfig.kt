@@ -12,7 +12,10 @@ data class StreamConfig(
     val maxRetries: Int = -1   // -1 = infinite retries
 ) {
     companion object {
-        const val DEFAULT_URL = "https://n12.radiojar.com/8s5u5tpdtwzuv?rj-ttl=5&rj-tok=AAABnIUADSoAgCb8D4alPlAfig"
+        // Use the permanent token-free URL: stream.radiojar.com/{stationId}
+        // This never expires — the server returns a 302 redirect to a fresh tokenized URL automatically.
+        // OkHttp follows the redirect transparently. Do NOT use the n12/n13 tokenized URLs as defaults.
+        const val DEFAULT_URL = "https://stream.radiojar.com/8s5u5tpdtwzuv"
         const val DEFAULT_NAME = "Live Stream"
     }
 }

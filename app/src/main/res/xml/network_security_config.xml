@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Allow cleartext (plain HTTP) connections to radiojar.com and its subdomains.
+
+    Radiojar's stream.radiojar.com returns an HTTP 302 redirect to a fresh tokenized
+    stream URL on n0X.radiojar.com over plain HTTP. Android 9+ blocks cleartext by
+    default, so we explicitly permit it for radiojar.com only.
+
+    All other traffic remains HTTPS-only.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">radiojar.com</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
