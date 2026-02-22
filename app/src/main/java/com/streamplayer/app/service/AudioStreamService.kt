@@ -100,6 +100,14 @@ class AudioStreamService : LifecycleService() {
                     play()
                 }
             }
+            null -> {
+                // START_STICKY restart: OS restarted the service after a crash.
+                // Intent is null, so start playing automatically.
+                if (!isIntentionallyStopped) {
+                    retryCount = 0
+                    play()
+                }
+            }
         }
         return START_STICKY
     }
@@ -115,7 +123,7 @@ class AudioStreamService : LifecycleService() {
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )
             val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarm.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1_000L, pi)
+            alarm.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 1_000L, pi)
         }
         super.onTaskRemoved(rootIntent)
     }
@@ -146,10 +154,10 @@ class AudioStreamService : LifecycleService() {
 
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15_000,  // min buffer to maintain during playback
-                30_000,  // max buffer ceiling
-                2_000,   // start playing after just 2s — don't wait for large pre-fill
-                5_000    // resume after rebuffer once 5s is available
+                20_000,  // min buffer to maintain during playback
+                60_000,  // max buffer ceiling
+                8_000,   // start playing after 8s pre-fill
+                8_000    // resume after rebuffer once 8s is available
             )
             .build()
 
