@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fallback round launcher icon for API 23–25. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
-        <color android:color="#1565C0" />
+        <shape android:shape="oval">
+            <solid android:color="#1A237E" />
+        </shape>
     </item>
     <item
-        android:top="16dp"
-        android:bottom="16dp"
-        android:left="16dp"
-        android:right="16dp"
-        android:drawable="@drawable/ic_radio" />
+        android:top="20dp"
+        android:bottom="20dp"
+        android:left="20dp"
+        android:right="20dp"
+        android:drawable="@drawable/ic_launcher_foreground" />
 </layer-list>
