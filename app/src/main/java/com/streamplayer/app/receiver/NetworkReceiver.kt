@@ -24,10 +24,9 @@ class NetworkReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!isConnected(context)) return
 
-        val config = StreamRepository(context).load()
-        // Only auto-reconnect if the service should be running
-        // The service's retry logic also handles this, but this covers
-        // the case where the service died completely during network outage.
+        // Only restart the service if the user had explicitly started playback.
+        if (!StreamRepository(context).isUserWantsPlaying()) return
+
         val serviceIntent = Intent(context, AudioStreamService::class.java).apply {
             action = AudioStreamService.ACTION_PLAY
         }

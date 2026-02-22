@@ -32,6 +32,19 @@ class StreamRepository(context: Context) {
         )
     }
 
+    /**
+     * Persisted flag: did the user explicitly start the stream?
+     * Used by WatchdogWorker, NetworkReceiver, and the START_STICKY null-intent
+     * handler to decide whether to auto-restart after a crash or network restore.
+     * Only Play sets it true; only Stop sets it false.
+     */
+    fun setUserWantsPlaying(wants: Boolean) {
+        prefs.edit().putBoolean(KEY_USER_WANTS_PLAYING, wants).apply()
+    }
+
+    fun isUserWantsPlaying(): Boolean =
+        prefs.getBoolean(KEY_USER_WANTS_PLAYING, false)
+
     companion object {
         private const val PREFS_NAME = "stream_prefs"
         private const val KEY_URL = "url"
@@ -39,5 +52,6 @@ class StreamRepository(context: Context) {
         private const val KEY_AUTO_BOOT = "auto_boot"
         private const val KEY_DELAY = "delay"
         private const val KEY_RETRIES = "retries"
+        private const val KEY_USER_WANTS_PLAYING = "user_wants_playing"
     }
 }

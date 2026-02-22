@@ -79,33 +79,42 @@ class AudioStreamService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        val repo = StreamRepository(this)
         when (intent?.action) {
             ACTION_PLAY -> {
                 isIntentionallyStopped = false
+                repo.setUserWantsPlaying(true)
                 retryCount = 0
                 play()
             }
             ACTION_STOP -> {
                 isIntentionallyStopped = true
+                repo.setUserWantsPlaying(false)
                 stopPlayback()
                 stopSelf()
             }
             ACTION_TOGGLE -> {
                 if (player.isPlaying) {
                     isIntentionallyStopped = true
+                    repo.setUserWantsPlaying(false)
                     stopPlayback()
                 } else {
                     isIntentionallyStopped = false
+                    repo.setUserWantsPlaying(true)
                     retryCount = 0
                     play()
                 }
             }
             null -> {
-                // START_STICKY restart: OS restarted the service after a crash.
-                // Intent is null, so start playing automatically.
-                if (!isIntentionallyStopped) {
+                // START_STICKY restart: OS restarted the service after a crash or OEM kill.
+                // Only resume if the user had previously started playback (persisted flag).
+                if (repo.isUserWantsPlaying()) {
+                    isIntentionallyStopped = false
                     retryCount = 0
                     play()
+                } else {
+                    // User explicitly stopped — do not auto-resume.
+                    stopSelf()
                 }
             }
         }
@@ -114,7 +123,7 @@ class AudioStreamService : LifecycleService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         // Schedule restart 1 second after user swipes app from recents
-        if (!isIntentionallyStopped) {
+        if (StreamRepository(this).isUserWantsPlaying()) {
             val restart = Intent(this, AudioStreamService::class.java).apply {
                 action = ACTION_PLAY
             }

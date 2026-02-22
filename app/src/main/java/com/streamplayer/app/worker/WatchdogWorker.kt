@@ -28,11 +28,14 @@ class WatchdogWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val config = StreamRepository(applicationContext).load()
+        val repo = StreamRepository(applicationContext)
+
+        // Only restart if the user actually wants the stream playing.
+        if (!repo.isUserWantsPlaying()) return Result.success()
 
         if (isServiceRunning()) return Result.success()
 
-        // Service is not running — restart if auto-start is configured
+        // Service is not running but user wants it — restart it.
         val intent = Intent(applicationContext, AudioStreamService::class.java).apply {
             action = AudioStreamService.ACTION_PLAY
         }
