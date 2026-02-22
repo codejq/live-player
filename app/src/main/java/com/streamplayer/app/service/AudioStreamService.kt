@@ -146,10 +146,10 @@ class AudioStreamService : LifecycleService() {
 
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                20_000,  // min buffer — keep 20s ahead before rebuffering
-                120_000, // max buffer — fill up to 2 min when possible
-                8_000,   // buffer needed before starting playback (8s)
-                8_000    // buffer needed after a rebuffer event (8s)
+                15_000,  // min buffer to maintain during playback
+                30_000,  // max buffer ceiling
+                2_000,   // start playing after just 2s — don't wait for large pre-fill
+                5_000    // resume after rebuffer once 5s is available
             )
             .build()
 
@@ -178,7 +178,15 @@ class AudioStreamService : LifecycleService() {
         config = StreamRepository(this).load()
         handler.removeCallbacksAndMessages(null)
 
-        val mediaItem = MediaItem.fromUri(config.url)
+        val mediaItem = MediaItem.Builder()
+            .setUri(config.url)
+            .setLiveConfiguration(
+                MediaItem.LiveConfiguration.Builder()
+                    .setMaxPlaybackSpeed(1f)   // no speed-up to catch up to live edge
+                    .setMinPlaybackSpeed(1f)   // no slow-down
+                    .build()
+            )
+            .build()
         player.stop()
         player.clearMediaItems()
         player.setMediaItem(mediaItem)
