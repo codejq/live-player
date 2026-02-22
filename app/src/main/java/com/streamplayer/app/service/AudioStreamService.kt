@@ -85,8 +85,15 @@ class AudioStreamService : LifecycleService() {
             ACTION_PLAY -> {
                 isIntentionallyStopped = false
                 repo.setUserWantsPlaying(true)
-                retryCount = 0
-                play()
+                // Skip restart if the player is already buffering or playing — this prevents
+                // onResume() / onTaskRemoved alarm from interrupting an active stream.
+                val alreadyActive = isRestarting ||
+                    player.playbackState == Player.STATE_BUFFERING ||
+                    player.playbackState == Player.STATE_READY
+                if (!alreadyActive) {
+                    retryCount = 0
+                    play()
+                }
             }
             ACTION_STOP -> {
                 isIntentionallyStopped = true
@@ -133,7 +140,12 @@ class AudioStreamService : LifecycleService() {
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )
             val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarm.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 1_000L, pi)
+            val triggerAt = SystemClock.elapsedRealtime() + 1_000L
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarm.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
+            } else {
+                alarm.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
+            }
         }
         super.onTaskRemoved(rootIntent)
     }
