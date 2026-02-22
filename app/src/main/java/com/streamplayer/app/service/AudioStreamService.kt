@@ -13,7 +13,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -28,11 +27,7 @@ import com.streamplayer.app.notification.NotificationHelper
 import com.streamplayer.app.receiver.BecomingNoisyReceiver
 import com.streamplayer.app.receiver.NetworkReceiver
 import com.streamplayer.app.repository.StreamRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 /**
@@ -145,7 +140,8 @@ class AudioStreamService : LifecycleService() {
     private fun buildPlayer() {
         okHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS)   // 0 = infinite — live streams never finish
+            .readTimeout(0, TimeUnit.SECONDS)
+            .addInterceptor(RedirectSavingInterceptor())
             .build()
 
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
@@ -177,43 +173,24 @@ class AudioStreamService : LifecycleService() {
             }
     }
 
-    // ─────────────────────────────────────────────
-    // Redirect Resolution
-    // ─────────────────────────────────────────────
-
     /**
-     * Follows HTTP redirects on a background thread (exactly like a browser).
-     * If the server redirects to a new URL (e.g. fresh Radiojar token), the
-     * new URL is saved to SharedPreferences so future reconnects use it too.
-     *
-     * Uses a short readTimeout so we don't wait for the audio body — we only
-     * need the final URL from the response headers, then close the connection.
+     * OkHttp application interceptor that fires once per logical request,
+     * AFTER all redirects have been followed. If the server redirected us
+     * to a new URL (e.g. fresh Radiojar token), we save it to SharedPreferences
+     * so every future reconnection uses the fresh URL directly.
      */
-    private suspend fun resolveRedirect(url: String): String = withContext(Dispatchers.IO) {
-        try {
-            val resolveClient = okHttpClient.newBuilder()
-                .readTimeout(10, TimeUnit.SECONDS)  // short timeout — just need headers
-                .build()
-
-            val request = Request.Builder()
-                .url(url)
-                .header("Icy-MetaData", "1")        // request ICY metadata like a radio player
-                .header("User-Agent", "StreamPlayer/1.0 (Android)")
-                .build()
-
-            resolveClient.newCall(request).execute().use { response ->
-                // response.request is the FINAL request after all redirects
-                val finalUrl = response.request.url.toString()
-                if (finalUrl != url) {
-                    // Server redirected us — save fresh URL so retries also use it
-                    val updatedConfig = config.copy(url = finalUrl)
-                    StreamRepository(this@AudioStreamService).save(updatedConfig)
-                    config = updatedConfig
-                }
-                finalUrl
+    private inner class RedirectSavingInterceptor : okhttp3.Interceptor {
+        override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
+            val originalUrl = chain.request().url.toString()
+            val response = chain.proceed(chain.request())
+            val finalUrl = response.request.url.toString()
+            if (finalUrl != originalUrl) {
+                // Redirected — persist the fresh URL
+                val updatedConfig = config.copy(url = finalUrl)
+                StreamRepository(applicationContext).save(updatedConfig)
+                config = updatedConfig
             }
-        } catch (e: Exception) {
-            url  // network error during resolution — fall back to original URL
+            return response
         }
     }
 
@@ -221,21 +198,12 @@ class AudioStreamService : LifecycleService() {
     // Playback Control
     // ─────────────────────────────────────────────
 
-    /**
-     * Async: resolves any redirect first, then starts ExoPlayer on the main thread.
-     */
     private fun play() {
         config = StreamRepository(this).load()
         handler.removeCallbacksAndMessages(null)
         updateNotification(isPlaying = false)
         broadcastState(isPlaying = false, isConnecting = true)
-
-        lifecycleScope.launch {
-            val resolvedUrl = resolveRedirect(config.url)
-            if (!isIntentionallyStopped) {
-                startExoPlayback(resolvedUrl)
-            }
-        }
+        startExoPlayback(config.url)
     }
 
     private fun startExoPlayback(url: String) {
