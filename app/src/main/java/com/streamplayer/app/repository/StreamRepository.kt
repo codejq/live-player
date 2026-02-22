@@ -39,11 +39,15 @@ class StreamRepository(context: Context) {
      * Only Play sets it true; only Stop sets it false.
      */
     fun setUserWantsPlaying(wants: Boolean) {
-        prefs.edit().putBoolean(KEY_USER_WANTS_PLAYING, wants).apply()
+        // commit() is synchronous — guarantees the flag survives a process kill
+        // that happens before apply()'s background write completes.
+        prefs.edit().putBoolean(KEY_USER_WANTS_PLAYING, wants).commit()
     }
 
     fun isUserWantsPlaying(): Boolean =
-        prefs.getBoolean(KEY_USER_WANTS_PLAYING, false)
+        // Default true so the stream auto-starts on first launch / after reinstall,
+        // matching the autoStartOnBoot=true default in StreamConfig.
+        prefs.getBoolean(KEY_USER_WANTS_PLAYING, true)
 
     companion object {
         private const val PREFS_NAME = "stream_prefs"
