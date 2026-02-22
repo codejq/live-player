@@ -12,7 +12,7 @@ data class StreamConfig(
     val maxRetries: Int = -1   // -1 = infinite retries
 ) {
     companion object {
-        const val DEFAULT_URL = "https://n09.radiojar.com/8s5u5tpdtwzuv"
+        const val DEFAULT_URL = "https://n12.radiojar.com/8s5u5tpdtwzuv?rj-ttl=5&rj-tok=AAABnIUADSoAgCb8D4alPlAfig"
         const val DEFAULT_NAME = "Live Stream"
     }
 }
