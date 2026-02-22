@@ -154,8 +154,8 @@ class AudioStreamService : LifecycleService() {
 
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                20_000,  // min buffer to maintain during playback
-                60_000,  // max buffer ceiling
+                8_000,   // min buffer = same as bufferForPlayback; prevents rebuffer loop on real-time streams
+                30_000,  // max buffer ceiling
                 8_000,   // start playing after 8s pre-fill
                 8_000    // resume after rebuffer once 8s is available
             )
