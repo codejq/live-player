@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+app/build/
+**/build/
+
+# Local config (machine-specific)
+local.properties
+*.iml
+
+# IDE
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/libraries/
+.idea/caches/
+*.DS_Store
+
+# Keystore / secrets
+*.jks
+*.keystore
+keystore.properties
