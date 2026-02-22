@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand colors -->
+    <color name="primary">#1565C0</color>
+    <color name="primary_variant">#003c8f</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="secondary">#00897B</color>
+    <color name="on_secondary">#FFFFFF</color>
+
+    <!-- Surface / Background -->
+    <color name="background">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#212121</color>
+    <color name="on_surface_variant">#757575</color>
+    <color name="divider">#E0E0E0</color>
+
+    <!-- Status indicators -->
+    <color name="indicator_active">#4CAF50</color>
+    <color name="indicator_inactive">#9E9E9E</color>
+
+    <!-- Notification accent -->
+    <color name="notification_color">#1565C0</color>
+
+    <!-- Dark theme overrides (night qualifier) -->
+    <color name="colorPrimary">#1565C0</color>
+    <color name="colorPrimaryDark">#003c8f</color>
+    <color name="colorAccent">#00897B</color>
+</resources>
