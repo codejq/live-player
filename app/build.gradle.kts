@@ -56,4 +56,5 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity.ktx)
+    implementation(libs.media.compat)    // androidx.media.app.NotificationCompat.MediaStyle
 }
