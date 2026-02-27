@@ -16,6 +16,7 @@ class StreamRepository(context: Context) {
             .putString(KEY_URL, config.url)
             .putString(KEY_NAME, config.name)
             .putBoolean(KEY_AUTO_BOOT, config.autoStartOnBoot)
+            .putBoolean(KEY_AUTO_RELAUNCH, config.autoRelaunch)
             .putInt(KEY_DELAY, config.reconnectDelaySeconds)
             .putInt(KEY_RETRIES, config.maxRetries)
             .putInt(KEY_VOLUME, config.volume)
@@ -28,6 +29,7 @@ class StreamRepository(context: Context) {
             url = prefs.getString(KEY_URL, defaults.url) ?: defaults.url,
             name = prefs.getString(KEY_NAME, defaults.name) ?: defaults.name,
             autoStartOnBoot = prefs.getBoolean(KEY_AUTO_BOOT, defaults.autoStartOnBoot),
+            autoRelaunch = prefs.getBoolean(KEY_AUTO_RELAUNCH, defaults.autoRelaunch),
             reconnectDelaySeconds = prefs.getInt(KEY_DELAY, defaults.reconnectDelaySeconds),
             maxRetries = prefs.getInt(KEY_RETRIES, defaults.maxRetries),
             volume = prefs.getInt(KEY_VOLUME, defaults.volume)
@@ -56,6 +58,7 @@ class StreamRepository(context: Context) {
         private const val KEY_URL = "url"
         private const val KEY_NAME = "name"
         private const val KEY_AUTO_BOOT = "auto_boot"
+        private const val KEY_AUTO_RELAUNCH = "auto_relaunch"
         private const val KEY_DELAY = "delay"
         private const val KEY_RETRIES = "retries"
         private const val KEY_USER_WANTS_PLAYING = "user_wants_playing"

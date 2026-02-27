@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,6 +17,30 @@ android {
         versionName = "1.0.0"
     }
 
+    // Signing config — reads from local.properties (local dev) or env vars (CI/GitHub Actions).
+    // local.properties is gitignored; env vars are injected by the GitHub Actions workflow.
+    val localProps = Properties().apply {
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) load(localPropsFile.inputStream())
+    }
+    fun signingProp(key: String): String? = localProps.getProperty(key) ?: System.getenv(key)
+
+    val keystorePath     = signingProp("KEYSTORE_PATH")
+    val keystorePassword = signingProp("KEYSTORE_PASSWORD")
+    val keyAlias         = signingProp("KEY_ALIAS")
+    val keyPassword      = signingProp("KEY_PASSWORD")
+
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -23,6 +49,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Apply signing config when keystore info is available (local dev or CI).
+            if (keystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isDebuggable = true

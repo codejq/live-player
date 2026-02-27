@@ -1,0 +1,61 @@
+name: Deploy to Google Play
+
+# Triggers when you push a version tag, e.g.: git tag v1.0.1 && git push --tags
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  deploy:
+    name: Build & Upload to Google Play
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ── 2. JDK ───────────────────────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # ── 3. Decode keystore ───────────────────────────────────────────────────
+      #  Secret KEYSTORE_BASE64 = base64-encoded piisoft.android.keystore
+      #  Generate with:  base64 -i piisoft.android.keystore | tr -d '\n'
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/piisoft.android.keystore
+
+      # ── 4. Build signed release AAB ──────────────────────────────────────────
+      #  Gradle reads KEYSTORE_PATH / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD
+      #  from the environment (same as local.properties on dev machines).
+      #  Key alias in piisoft.android.keystore: key0
+      - name: Build signed release AAB
+        run: ./gradlew :app:bundleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/piisoft.android.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # ── 5. Upload to Google Play (Internal track) ────────────────────────────
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          packageName: com.streamplayer.app
+          # Gradle signs the AAB itself — no separate signing step needed.
+          releaseFiles: app/build/outputs/bundle/release/*.aab
+          track: internal
+          # Change to 'alpha', 'beta', or 'production' when ready for wider release
+          status: completed
+
+      # ── 6. Clean up keystore ─────────────────────────────────────────────────
+      - name: Remove keystore
+        if: always()
+        run: rm -f $GITHUB_WORKSPACE/piisoft.android.keystore

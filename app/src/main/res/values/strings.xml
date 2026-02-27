@@ -22,6 +22,8 @@
     <string name="hint_stream_url">Stream URL (https://…)</string>
     <string name="label_auto_boot">Auto-start on Boot</string>
     <string name="label_auto_boot_desc">Start stream automatically after device reboots</string>
+    <string name="label_auto_relaunch">Auto-relaunch if Stopped</string>
+    <string name="label_auto_relaunch_desc">Automatically resume stream after crash, network loss, or stop</string>
     <string name="hint_reconnect_delay">Reconnect Delay (seconds)</string>
     <string name="hint_max_retries">Max Retries (−1 = infinite)</string>
     <string name="settings_saved">Settings saved</string>

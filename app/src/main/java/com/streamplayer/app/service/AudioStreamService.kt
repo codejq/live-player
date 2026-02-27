@@ -117,7 +117,9 @@ class AudioStreamService : LifecycleService() {
             }
             ACTION_STOP -> {
                 isIntentionallyStopped = true
-                // Do NOT clear isUserWantsPlaying — background restart mechanisms stay armed.
+                // If auto-relaunch is disabled, mark that the user no longer wants playback
+                // so that watchdogs (WatchdogWorker, NetworkReceiver, RestartReceiver) stay idle.
+                if (!config.autoRelaunch) repo.setUserWantsPlaying(false)
                 stopPlayback()
                 stopSelf()
             }
@@ -133,7 +135,12 @@ class AudioStreamService : LifecycleService() {
                 }
             }
             null -> {
-                // START_STICKY restart (crash / OEM kill) — always resume.
+                // START_STICKY restart (crash / OEM kill).
+                // If auto-relaunch is disabled and the user had stopped playback, stay stopped.
+                if (!config.autoRelaunch && !repo.isUserWantsPlaying()) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
                 isIntentionallyStopped = false
                 retryCount = 0
                 play()
@@ -145,7 +152,10 @@ class AudioStreamService : LifecycleService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         // Use BroadcastReceiver (not getService) — startForegroundService is allowed
         // from a BroadcastReceiver context even on API 26+.
-        RestartReceiver.scheduleOneShot(this, 1_000L)
+        // Only schedule a fast restart if auto-relaunch is enabled.
+        if (StreamRepository(this).load().autoRelaunch) {
+            RestartReceiver.scheduleOneShot(this, 1_000L)
+        }
         super.onTaskRemoved(rootIntent)
     }
 

@@ -44,6 +44,7 @@ class SettingsActivity : AppCompatActivity() {
                 binding.etStreamUrl.setText(config.url)
                 binding.etStreamName.setText(config.name)
                 binding.switchAutoBoot.isChecked = config.autoStartOnBoot
+                binding.switchAutoRelaunch.isChecked = config.autoRelaunch
                 binding.etReconnectDelay.setText(config.reconnectDelaySeconds.toString())
                 binding.etMaxRetries.setText(config.maxRetries.toString())
                 binding.seekVolume.progress = config.volume
@@ -88,6 +89,7 @@ class SettingsActivity : AppCompatActivity() {
                 url = binding.etStreamUrl.text.toString(),
                 name = binding.etStreamName.text.toString(),
                 autoStartOnBoot = binding.switchAutoBoot.isChecked,
+                autoRelaunch = binding.switchAutoRelaunch.isChecked,
                 reconnectDelaySeconds = delay,
                 maxRetries = retries,
                 volume = volume

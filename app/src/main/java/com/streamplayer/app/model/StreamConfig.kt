@@ -8,6 +8,9 @@ data class StreamConfig(
     val url: String = DEFAULT_URL,
     val name: String = DEFAULT_NAME,
     val autoStartOnBoot: Boolean = true,
+    /** When true (default), watchdogs and alarms automatically restart the stream if it stops.
+     *  When false, the stream stays stopped until the user explicitly presses Play. */
+    val autoRelaunch: Boolean = true,
     val reconnectDelaySeconds: Int = 5,
     val maxRetries: Int = -1,  // -1 = infinite retries
     /** App-level playback volume as a percentage (1–100).

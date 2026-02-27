@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
+import com.streamplayer.app.repository.StreamRepository
 import com.streamplayer.app.service.AudioStreamService
 
 /**
@@ -29,6 +30,12 @@ import com.streamplayer.app.service.AudioStreamService
 class RestartReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        // Keep the alarm chain alive regardless of user preference.
+        schedule(context)
+
+        // If auto-relaunch is disabled (user stopped explicitly), skip the restart.
+        if (!StreamRepository(context).isUserWantsPlaying()) return
+
         // Kick the service (no-op if already playing, restarts if dead)
         val serviceIntent = Intent(context, AudioStreamService::class.java).apply {
             action = AudioStreamService.ACTION_PLAY
@@ -38,9 +45,6 @@ class RestartReceiver : BroadcastReceiver() {
         } else {
             context.startService(serviceIntent)
         }
-
-        // Keep the chain alive
-        schedule(context)
     }
 
     companion object {

@@ -31,6 +31,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         url: String,
         name: String,
         autoStartOnBoot: Boolean,
+        autoRelaunch: Boolean,
         reconnectDelaySeconds: Int,
         maxRetries: Int,
         volume: Int = 100
@@ -55,6 +56,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             url = url.trim(),
             name = name.trim().ifBlank { StreamConfig.DEFAULT_NAME },
             autoStartOnBoot = autoStartOnBoot,
+            autoRelaunch = autoRelaunch,
             reconnectDelaySeconds = reconnectDelaySeconds,
             maxRetries = maxRetries,
             volume = volume.coerceIn(1, 100)
