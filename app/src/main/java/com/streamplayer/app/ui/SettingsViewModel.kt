@@ -32,7 +32,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         name: String,
         autoStartOnBoot: Boolean,
         reconnectDelaySeconds: Int,
-        maxRetries: Int
+        maxRetries: Int,
+        volume: Int = 100
     ) {
         // Validate URL
         if (url.isBlank()) {
@@ -55,7 +56,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             name = name.trim().ifBlank { StreamConfig.DEFAULT_NAME },
             autoStartOnBoot = autoStartOnBoot,
             reconnectDelaySeconds = reconnectDelaySeconds,
-            maxRetries = maxRetries
+            maxRetries = maxRetries,
+            volume = volume.coerceIn(1, 100)
         )
         repository.save(newConfig)
         _config.value = newConfig

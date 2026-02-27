@@ -9,7 +9,11 @@ data class StreamConfig(
     val name: String = DEFAULT_NAME,
     val autoStartOnBoot: Boolean = true,
     val reconnectDelaySeconds: Int = 5,
-    val maxRetries: Int = -1   // -1 = infinite retries
+    val maxRetries: Int = -1,  // -1 = infinite retries
+    /** App-level playback volume as a percentage (1–100).
+     *  Applied via ExoPlayer.setVolume() independently of the system / Bluetooth volume knob.
+     *  Default 100 = maximum signal from the app (system volume still scales the output). */
+    val volume: Int = 100
 ) {
     companion object {
         // Use the permanent token-free URL: stream.radiojar.com/{stationId}

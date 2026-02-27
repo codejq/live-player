@@ -18,6 +18,7 @@ class StreamRepository(context: Context) {
             .putBoolean(KEY_AUTO_BOOT, config.autoStartOnBoot)
             .putInt(KEY_DELAY, config.reconnectDelaySeconds)
             .putInt(KEY_RETRIES, config.maxRetries)
+            .putInt(KEY_VOLUME, config.volume)
             .apply()
     }
 
@@ -28,7 +29,8 @@ class StreamRepository(context: Context) {
             name = prefs.getString(KEY_NAME, defaults.name) ?: defaults.name,
             autoStartOnBoot = prefs.getBoolean(KEY_AUTO_BOOT, defaults.autoStartOnBoot),
             reconnectDelaySeconds = prefs.getInt(KEY_DELAY, defaults.reconnectDelaySeconds),
-            maxRetries = prefs.getInt(KEY_RETRIES, defaults.maxRetries)
+            maxRetries = prefs.getInt(KEY_RETRIES, defaults.maxRetries),
+            volume = prefs.getInt(KEY_VOLUME, defaults.volume)
         )
     }
 
@@ -57,5 +59,6 @@ class StreamRepository(context: Context) {
         private const val KEY_DELAY = "delay"
         private const val KEY_RETRIES = "retries"
         private const val KEY_USER_WANTS_PLAYING = "user_wants_playing"
+        private const val KEY_VOLUME = "volume"
     }
 }

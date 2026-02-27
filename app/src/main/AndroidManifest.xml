@@ -21,6 +21,12 @@
     <!-- Battery optimization exemption request -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Exact alarms — needed by RestartReceiver watchdog so it fires even in Doze mode.
+         USE_EXACT_ALARM: auto-granted for media apps on API 33+.
+         SCHEDULE_EXACT_ALARM: user-granted on API 31-32; falls back to inexact on denial. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:name=".StreamPlayerApplication"
         android:allowBackup="true"
@@ -91,6 +97,16 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.media.AUDIO_BECOMING_NOISY" />
+            </intent-filter>
+        </receiver>
+
+        <!-- AlarmManager watchdog: fires every 2 minutes to restart the service if dead.
+             Must be exported=false; Android delivers alarms to unexported receivers. -->
+        <receiver
+            android:name=".receiver.RestartReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.streamplayer.ALARM_RESTART" />
             </intent-filter>
         </receiver>
 

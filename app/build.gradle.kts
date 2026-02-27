@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.streamplayer.app"
-        minSdk = 23
+        minSdk = 22
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
@@ -40,6 +40,14 @@ android {
 
     buildFeatures {
         viewBinding = true
+    }
+
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "StreamPlayer-${variant.versionName}-${variant.buildType.name}.apk"
+        }
     }
 }
 

@@ -122,6 +122,48 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Volume -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/label_volume"
+                    android:textColor="@color/on_surface"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvVolumePercent"
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:text="100%"
+                    android:textColor="@color/on_surface"
+                    android:textSize="16sp"
+                    android:gravity="end" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/seekVolume"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:max="100"
+                android:progress="100" />
+
+        </LinearLayout>
+
         <!-- Save button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"

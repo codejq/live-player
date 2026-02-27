@@ -1,6 +1,7 @@
 package com.streamplayer.app
 
 import android.os.Bundle
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +28,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         observeViewModel()
+        setupVolumeSeekBar()
         setupSaveButton()
     }
 
@@ -44,6 +46,8 @@ class SettingsActivity : AppCompatActivity() {
                 binding.switchAutoBoot.isChecked = config.autoStartOnBoot
                 binding.etReconnectDelay.setText(config.reconnectDelaySeconds.toString())
                 binding.etMaxRetries.setText(config.maxRetries.toString())
+                binding.seekVolume.progress = config.volume
+                binding.tvVolumePercent.text = "${config.volume}%"
             }
         }
 
@@ -62,16 +66,31 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupVolumeSeekBar() {
+        binding.seekVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                // Enforce minimum of 1% so the stream is never silenced by accident
+                val clamped = progress.coerceAtLeast(1)
+                if (progress < 1) seekBar.progress = clamped
+                binding.tvVolumePercent.text = "${clamped}%"
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar) {}
+        })
+    }
+
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
             val delay = binding.etReconnectDelay.text.toString().toIntOrNull() ?: 5
             val retries = binding.etMaxRetries.text.toString().toIntOrNull() ?: -1
+            val volume = binding.seekVolume.progress.coerceIn(1, 100)
             viewModel.save(
                 url = binding.etStreamUrl.text.toString(),
                 name = binding.etStreamName.text.toString(),
                 autoStartOnBoot = binding.switchAutoBoot.isChecked,
                 reconnectDelaySeconds = delay,
-                maxRetries = retries
+                maxRetries = retries,
+                volume = volume
             )
         }
     }

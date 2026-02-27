@@ -25,6 +25,7 @@
     <string name="hint_reconnect_delay">Reconnect Delay (seconds)</string>
     <string name="hint_max_retries">Max Retries (−1 = infinite)</string>
     <string name="settings_saved">Settings saved</string>
+    <string name="label_volume">Playback Volume</string>
 
     <!-- Battery optimization dialog -->
     <string name="battery_dialog_title">Battery Optimization</string>

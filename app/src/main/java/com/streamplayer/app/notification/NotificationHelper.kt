@@ -47,7 +47,7 @@ class NotificationHelper(private val context: Context) {
             Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
             },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or immutableFlag()
         )
 
         // Stop action button
@@ -56,7 +56,7 @@ class NotificationHelper(private val context: Context) {
             Intent(context, AudioStreamService::class.java).apply {
                 action = AudioStreamService.ACTION_STOP
             },
-            PendingIntent.FLAG_IMMUTABLE
+            immutableFlag()
         )
 
         // Play action button (shown when paused/connecting)
@@ -65,7 +65,7 @@ class NotificationHelper(private val context: Context) {
             Intent(context, AudioStreamService::class.java).apply {
                 action = AudioStreamService.ACTION_PLAY
             },
-            PendingIntent.FLAG_IMMUTABLE
+            immutableFlag()
         )
 
         val statusText = when {
@@ -116,5 +116,14 @@ class NotificationHelper(private val context: Context) {
 
     companion object {
         const val CHANNEL_ID = "stream_player_channel"
+
+        /**
+         * Returns PendingIntent.FLAG_IMMUTABLE on API 23+ (where it exists),
+         * or 0 on API 22 (Android 5.x). ART resolves field accesses lazily
+         * per instruction, so the FLAG_IMMUTABLE branch is never reached on API 22.
+         */
+        @Suppress("InlinedApi")
+        fun immutableFlag(): Int =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
     }
 }
