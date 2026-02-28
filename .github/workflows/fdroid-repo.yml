@@ -75,20 +75,24 @@ jobs:
         run: mkdir -p fdroid-work/repo fdroid-work/metadata
 
       # ── 5. Restore F-Droid repo signing key ──────────────────────────────
-      #  Converts to legacy PKCS12 (3DES) so fdroidserver's bundled
-      #  BouncyCastle can read it — same fix as the APK signing keystore.
+      #  Convert to JKS with absolute path so fdroidserver can always find it.
       - name: Restore F-Droid keystore
+        env:
+          FDROID_PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
         run: |
           echo "${{ secrets.FDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/fdroid-orig.jks
           keytool -importkeystore \
             -srckeystore /tmp/fdroid-orig.jks \
-            -srcstorepass "${{ secrets.FDROID_KEYSTORE_PASS }}" \
-            -destkeystore fdroid-work/keystore.jks \
-            -deststoretype PKCS12 \
-            -deststorepass "${{ secrets.FDROID_KEYSTORE_PASS }}" \
-            -noprompt \
-            -J-Dkeystore.pkcs12.legacy
+            -srcstorepass "$FDROID_PASS" \
+            -destkeystore "$GITHUB_WORKSPACE/fdroid-work/keystore.jks" \
+            -deststoretype JKS \
+            -deststorepass "$FDROID_PASS" \
+            -noprompt
           rm -f /tmp/fdroid-orig.jks
+          # Verify the keystore is readable before continuing
+          keytool -list \
+            -keystore "$GITHUB_WORKSPACE/fdroid-work/keystore.jks" \
+            -storepass "$FDROID_PASS" 2>&1 | grep -E "Keystore type|Your keystore contains|Alias"
 
       # ── 6. Write fdroid config ────────────────────────────────────────────
       - name: Write fdroid config
@@ -96,12 +100,13 @@ jobs:
           PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
         run: |
           REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo"
+          KS_PATH="$GITHUB_WORKSPACE/fdroid-work/keystore.jks"
           cat > fdroid-work/config.yml << EOF
           repo_url: "${REPO_URL}"
           repo_name: "StreamPlayer"
           repo_description: "StreamPlayer — live internet radio for Android"
           archive_older: 5
-          keystore: keystore.jks
+          keystore: "${KS_PATH}"
           keystorepass: "${PASS}"
           keypass: "${PASS}"
           repo_keyalias: fdroid
