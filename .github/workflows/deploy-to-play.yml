@@ -32,9 +32,21 @@ jobs:
       #  Secret KEYSTORE_BASE64 = base64-encoded piisoft.android.keystore
       #  Generate on Windows:
       #    [Convert]::ToBase64String([IO.File]::ReadAllBytes("piisoft.android.keystore"))
+      #
+      #  Modern PKCS12 keystores (JDK 9+) use AES-256 encryption that the older
+      #  BouncyCastle bundled with Android Gradle Plugin cannot parse, causing
+      #  "Tag number over 30 is not supported". We convert to JKS format first,
+      #  which AGP reads via the JVM's built-in provider rather than BouncyCastle.
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/piisoft.android.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/piisoft-orig.keystore
+          keytool -importkeystore \
+            -srckeystore /tmp/piisoft-orig.keystore \
+            -srcstorepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -destkeystore $GITHUB_WORKSPACE/piisoft.android.keystore \
+            -deststoretype JKS \
+            -deststorepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -noprompt
 
       # ── 4. Build signed release APK + AAB ────────────────────────────────────
       #  Both outputs are signed by Gradle via the env vars below.
@@ -93,4 +105,4 @@ jobs:
       # ── 7. Clean up keystore ─────────────────────────────────────────────────
       - name: Remove keystore
         if: always()
-        run: rm -f $GITHUB_WORKSPACE/piisoft.android.keystore
+        run: rm -f $GITHUB_WORKSPACE/piisoft.android.keystore /tmp/piisoft-orig.keystore
