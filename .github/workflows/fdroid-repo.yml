@@ -84,9 +84,10 @@ jobs:
           keystore: keystore.jks
           keystorepass: "${PASS}"
           keypass: "${PASS}"
-          keyalias: fdroid
+          repo_keyalias: fdroid
           keydname: "CN=StreamPlayer F-Droid Repo"
           EOF
+          chmod 600 fdroid-work/config.yml
 
       # ── 6. Write app metadata ─────────────────────────────────────────────
       - name: Write app metadata
