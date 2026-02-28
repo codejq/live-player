@@ -78,9 +78,14 @@ jobs:
       #  Convert to JKS with absolute path so fdroidserver can always find it.
       - name: Restore F-Droid keystore
         env:
-          FDROID_PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
+          FDROID_B64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+          FDROID_PASS_RAW: ${{ secrets.FDROID_KEYSTORE_PASS }}
         run: |
-          echo "${{ secrets.FDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/fdroid-orig.jks
+          # Strip any whitespace/line-breaks that sneak into secrets when copy-pasting
+          # (PowerShell base64 output wraps at 76 chars; passwords can have trailing newlines)
+          FDROID_PASS=$(printf '%s' "$FDROID_PASS_RAW" | tr -d '\r\n')
+          printf '%s' "$FDROID_B64" | tr -d ' \r\n' | base64 --decode > /tmp/fdroid-orig.jks
+
           keytool -importkeystore \
             -srckeystore /tmp/fdroid-orig.jks \
             -srcstoretype PKCS12 \
@@ -90,7 +95,8 @@ jobs:
             -deststorepass "$FDROID_PASS" \
             -noprompt
           rm -f /tmp/fdroid-orig.jks
-          # Verify the keystore is readable before continuing
+
+          # Verify keystore is readable — alias name must match repo_keyalias in config
           keytool -list \
             -keystore "$GITHUB_WORKSPACE/fdroid-work/keystore.jks" \
             -storepass "$FDROID_PASS" 2>&1 | grep -E "Keystore type|Your keystore contains|Alias"
