@@ -41,7 +41,9 @@ jobs:
       #  APK  → app/build/outputs/apk/release/StreamPlayer-*.apk   (direct download)
       #  AAB  → app/build/outputs/bundle/release/*.aab              (Google Play)
       - name: Build signed release APK and AAB
-        run: ./gradlew :app:assembleRelease :app:bundleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease :app:bundleRelease
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/piisoft.android.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
