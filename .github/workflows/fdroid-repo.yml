@@ -83,6 +83,7 @@ jobs:
           echo "${{ secrets.FDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/fdroid-orig.jks
           keytool -importkeystore \
             -srckeystore /tmp/fdroid-orig.jks \
+            -srcstoretype PKCS12 \
             -srcstorepass "$FDROID_PASS" \
             -destkeystore "$GITHUB_WORKSPACE/fdroid-work/keystore.jks" \
             -deststoretype JKS \
