@@ -1,0 +1,134 @@
+name: F-Droid Repository
+
+# Runs whenever the main "Build & Release" workflow publishes a GitHub Release.
+# Can also be triggered manually via the Actions tab (workflow_dispatch).
+#
+# How it works:
+#   1. Downloads the signed APK from the GitHub Release.
+#   2. Uses fdroidserver to generate a proper F-Droid repo index (index.xml / index-v1.jar).
+#   3. Deploys the repo to GitHub Pages under /fdroid/repo/.
+#
+# Users add this URL to their F-Droid app:
+#   https://<owner>.github.io/<repo>/fdroid/repo
+#
+# Required GitHub Secrets:
+#   FDROID_KEYSTORE_BASE64  — Base64-encoded JKS keystore used to sign the repo index.
+#   FDROID_KEYSTORE_PASS    — Password for the keystore and the "fdroid" key alias.
+#
+# Generate the F-Droid repo keystore once (run locally):
+#   keytool -genkey -v -keystore fdroid.jks -alias fdroid -keyalg RSA \
+#     -keysize 4096 -sigalg SHA256withRSA -validity 10000 \
+#     -dname "CN=StreamPlayer F-Droid Repo" \
+#     -storepass YOUR_PASSWORD -keypass YOUR_PASSWORD
+#
+#   Encode for GitHub Secret:
+#     Linux/macOS:  base64 -w 0 fdroid.jks
+#     Windows PS:   [Convert]::ToBase64String([IO.File]::ReadAllBytes("fdroid.jks"))
+#
+# After the first successful deploy, enable GitHub Pages:
+#   Settings → Pages → Source: Deploy from branch → Branch: gh-pages / root
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  update-fdroid-repo:
+    name: Update F-Droid Repo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to push to the gh-pages branch
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ── 2. Install fdroidserver ───────────────────────────────────────────────
+      - name: Install fdroidserver
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libmagic1 aapt
+          pip install fdroidserver
+
+      # ── 3. Prepare repo structure ─────────────────────────────────────────────
+      - name: Prepare directories
+        run: mkdir -p fdroid/repo fdroid/metadata
+
+      # ── 4. Restore F-Droid repo signing key ──────────────────────────────────
+      - name: Restore F-Droid keystore
+        run: |
+          echo "${{ secrets.FDROID_KEYSTORE_BASE64 }}" | base64 --decode > fdroid/keystore.jks
+
+      # ── 5. Write fdroid config ────────────────────────────────────────────────
+      - name: Write fdroid config
+        env:
+          PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
+        run: |
+          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo"
+          cat > fdroid/config.yml << EOF
+          repo_url: "${REPO_URL}"
+          repo_name: "StreamPlayer"
+          repo_description: "StreamPlayer — live internet radio for Android"
+          archive_older: 5
+          keystore: keystore.jks
+          keystorepass: "${PASS}"
+          keypass: "${PASS}"
+          keyalias: fdroid
+          keydname: "CN=StreamPlayer F-Droid Repo"
+          EOF
+
+      # ── 6. Write app metadata ─────────────────────────────────────────────────
+      - name: Write app metadata
+        run: |
+          cat > fdroid/metadata/com.streamplayer.app.yml << 'EOF'
+          Categories:
+            - Multimedia
+          License: MIT
+          SourceCode: https://github.com/${{ github.repository }}
+          Name: StreamPlayer
+          Summary: Live internet radio and audio streaming
+          Description: |-
+            Resilient Android background audio streaming for live internet radio.
+            Survives crashes, network drops, device reboots, Doze mode, and
+            aggressive OEM battery killers. Features auto-relaunch watchdogs,
+            network auto-recovery, and adaptive 8-30s buffering.
+          EOF
+
+      # ── 7. Download signed APK from GitHub Release ────────────────────────────
+      - name: Download APK from release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          # Fall back to latest release when triggered via workflow_dispatch
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release view --json tagName -q .tagName)
+          fi
+          gh release download "$TAG" \
+            --pattern "StreamPlayer-*.apk" \
+            --dir fdroid/repo
+
+      # ── 8. Build F-Droid repo index ───────────────────────────────────────────
+      - name: Build F-Droid repo index
+        run: |
+          cd fdroid
+          fdroid update -c
+
+      # ── 9. Remove keystore before publishing ──────────────────────────────────
+      - name: Remove keystore
+        if: always()
+        run: rm -f fdroid/keystore.jks
+
+      # ── 10. Deploy to GitHub Pages ────────────────────────────────────────────
+      #  Pushes the fdroid/ directory to the gh-pages branch under /fdroid/.
+      #  Final F-Droid repo URL: https://<owner>.github.io/<repo>/fdroid/repo
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: fdroid
+          publish_branch: gh-pages
+          destination_dir: fdroid
+          keep_files: true
