@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StreamPlayer — Resilient live internet radio and audio streaming for Android. Survives crashes, network drops, and device reboots.">
+  <meta name="theme-color" content="#080c18">
+  <meta property="og:title" content="StreamPlayer — Live Audio Streaming">
+  <meta property="og:description" content="Resilient live internet radio for Android. Survives crashes, network drops, and aggressive OEM battery killers.">
+  <meta property="og:type" content="website">
+  <title>StreamPlayer — Live Audio Streaming for Android</title>
+
+  <!-- Bootstrap 5.3.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons 1.11.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Font Awesome 6.7.2 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --sp-bg:           #080c18;
+      --sp-surface:      #111827;
+      --sp-card:         #1a2438;
+      --sp-border:       #2d3748;
+      --sp-primary:      #4f46e5;
+      --sp-primary-lt:   #6366f1;
+      --sp-accent:       #06b6d4;
+      --sp-text:         #f1f5f9;
+      --sp-muted:        #94a3b8;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--sp-bg);
+      color: var(--sp-text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ── Navbar ──────────────────────────────────────────── */
+    .navbar {
+      background-color: rgba(8, 12, 24, 0.88) !important;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--sp-border);
+    }
+    .navbar-brand { font-weight: 800; font-size: 1.35rem; }
+    .brand-icon { color: var(--sp-accent); }
+    .nav-link { color: var(--sp-muted) !important; font-size: 0.9rem; transition: color .2s; }
+    .nav-link:hover { color: var(--sp-text) !important; }
+
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      background:
+        radial-gradient(ellipse at 15% 55%, rgba(79,70,229,.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 20%, rgba(6,182,212,.12) 0%, transparent 50%),
+        var(--sp-bg);
+    }
+
+    .hero-app-icon {
+      width: 110px; height: 110px;
+      background: linear-gradient(135deg, var(--sp-primary), var(--sp-accent));
+      border-radius: 26px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.2rem; color: #fff;
+      box-shadow: 0 20px 60px rgba(79,70,229,.45);
+      margin: 0 auto 2rem;
+    }
+    .hero-app-icon-lg {
+      width: 210px; height: 210px;
+      border-radius: 52px;
+      font-size: 7rem;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(6,182,212,.12);
+      border: 1px solid rgba(6,182,212,.3);
+      color: var(--sp-accent);
+      border-radius: 50px;
+      padding: 5px 16px;
+      font-size: .82rem; font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.025em;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--sp-primary-lt), var(--sp-accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--sp-muted);
+      max-width: 540px;
+      line-height: 1.75;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────── */
+    .btn-sp-primary {
+      background: linear-gradient(135deg, var(--sp-primary), var(--sp-primary-lt));
+      border: none;
+      padding: 13px 26px;
+      font-weight: 600; font-size: .95rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(79,70,229,.4);
+      color: #fff; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: all .2s;
+    }
+    .btn-sp-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(79,70,229,.5);
+      color: #fff;
+    }
+
+    .btn-sp-outline {
+      background: transparent;
+      border: 1.5px solid var(--sp-border);
+      padding: 12px 26px;
+      font-weight: 600; font-size: .95rem;
+      border-radius: 12px;
+      color: var(--sp-text); text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: all .2s;
+    }
+    .btn-sp-outline:hover {
+      border-color: var(--sp-primary-lt);
+      color: var(--sp-primary-lt);
+      background: rgba(99,102,241,.08);
+    }
+
+    .btn-sp-fdroid {
+      background: #1d6b35;
+      border: none;
+      padding: 12px 26px;
+      font-weight: 600; font-size: .95rem;
+      border-radius: 12px;
+      color: #fff; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: all .2s;
+    }
+    .btn-sp-fdroid:hover { background: #228a42; color: #fff; transform: translateY(-2px); }
+
+    /* ── Pulse animation on brand icon ───────────────────── */
+    .pulse-dot {
+      position: relative; display: inline-flex;
+    }
+    .pulse-dot::after {
+      content: '';
+      position: absolute; inset: -6px;
+      border-radius: 50%;
+      border: 2px solid var(--sp-accent);
+      animation: pulse-anim 2.2s ease-out infinite;
+      opacity: 0;
+    }
+    @keyframes pulse-anim {
+      0%   { transform: scale(.8); opacity: .7; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+
+    /* ── Stats bar ────────────────────────────────────────── */
+    .stats-bar {
+      background: var(--sp-surface);
+      border-top: 1px solid var(--sp-border);
+      border-bottom: 1px solid var(--sp-border);
+      padding: 22px 0;
+    }
+    .stat-value { font-size: 1.55rem; font-weight: 800; color: var(--sp-primary-lt); }
+    .stat-label { font-size: .75rem; color: var(--sp-muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+
+    /* ── Sections ─────────────────────────────────────────── */
+    section { padding: 90px 0; }
+    .section-eyebrow {
+      font-size: .78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--sp-accent);
+      margin-bottom: .6rem;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 3.8vw, 2.4rem);
+      font-weight: 800; letter-spacing: -.015em;
+    }
+
+    /* ── Feature cards ────────────────────────────────────── */
+    .feature-card {
+      background: var(--sp-card);
+      border: 1px solid var(--sp-border);
+      border-radius: 18px;
+      padding: 28px 26px;
+      height: 100%;
+      transition: border-color .25s, transform .25s, box-shadow .25s;
+    }
+    .feature-card:hover {
+      border-color: var(--sp-primary);
+      transform: translateY(-5px);
+      box-shadow: 0 14px 44px rgba(79,70,229,.18);
+    }
+    .feat-icon {
+      width: 50px; height: 50px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.45rem;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+    .fi-purple { background: rgba(99,102,241,.15); color: #818cf8; }
+    .fi-cyan   { background: rgba(6,182,212,.15);  color: #22d3ee; }
+    .fi-green  { background: rgba(34,197,94,.15);  color: #4ade80; }
+    .fi-orange { background: rgba(251,146,60,.15); color: #fb923c; }
+    .fi-blue   { background: rgba(59,130,246,.15); color: #60a5fa; }
+    .fi-pink   { background: rgba(244,114,182,.15);color: #f472b6; }
+    .fi-yellow { background: rgba(250,204,21,.15); color: #facc15; }
+    .fi-teal   { background: rgba(20,184,166,.15); color: #2dd4bf; }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p  { font-size: .87rem; color: var(--sp-muted); line-height: 1.65; margin: 0; }
+
+    /* ── Download section ─────────────────────────────────── */
+    .dl-section { background: var(--sp-surface); }
+    .dl-card {
+      background: var(--sp-card);
+      border: 1px solid var(--sp-border);
+      border-radius: 20px;
+      padding: 36px 32px;
+      height: 100%;
+      transition: border-color .2s;
+    }
+    .dl-card.featured {
+      border-color: var(--sp-primary);
+      box-shadow: 0 0 0 1px var(--sp-primary), 0 20px 64px rgba(79,70,229,.22);
+    }
+    .featured-pill {
+      display: inline-block;
+      background: var(--sp-primary);
+      color: #fff;
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em;
+      padding: 3px 12px; border-radius: 50px;
+    }
+
+    /* ── Repo URL copy strip ──────────────────────────────── */
+    .repo-url-strip {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid var(--sp-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .repo-url-strip code {
+      flex: 1; font-size: .78rem;
+      color: var(--sp-accent); word-break: break-all;
+      background: none; padding: 0;
+    }
+    .copy-btn {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--sp-border);
+      color: var(--sp-muted);
+      border-radius: 8px;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .2s; flex-shrink: 0;
+      font-size: .9rem;
+    }
+    .copy-btn:hover  { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+    .copy-btn.copied { background: #16a34a; border-color: #16a34a; color: #fff; }
+
+    /* ── Settings table ───────────────────────────────────── */
+    .settings-wrap {
+      background: var(--sp-card);
+      border: 1px solid var(--sp-border);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .settings-wrap table { margin: 0; }
+    .settings-wrap thead th {
+      background: rgba(79,70,229,.12);
+      color: var(--sp-primary-lt);
+      font-weight: 700; font-size: .85rem;
+      border-color: var(--sp-border);
+    }
+    .settings-wrap td {
+      border-color: var(--sp-border);
+      color: var(--sp-text);
+      vertical-align: middle;
+      font-size: .9rem;
+    }
+    .settings-wrap tr:hover td { background: rgba(255,255,255,.025); }
+    .badge-default {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(34,197,94,.14); color: #4ade80;
+      border-radius: 6px; padding: 2px 9px;
+      font-size: .78rem; font-weight: 700;
+    }
+    .code-chip {
+      font-family: 'Consolas', 'Courier New', monospace;
+      background: rgba(6,182,212,.1);
+      color: var(--sp-accent);
+      border-radius: 5px; padding: 2px 7px;
+      font-size: .8rem;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    footer {
+      background: var(--sp-surface);
+      border-top: 1px solid var(--sp-border);
+      padding: 64px 0 28px;
+    }
+    .footer-brand { font-size: 1.25rem; font-weight: 800; }
+    .footer-link {
+      color: var(--sp-muted); text-decoration: none;
+      font-size: .88rem; transition: color .2s;
+    }
+    .footer-link:hover { color: var(--sp-text); }
+    .social-icon {
+      width: 38px; height: 38px;
+      background: var(--sp-card); border: 1px solid var(--sp-border);
+      border-radius: 10px; color: var(--sp-muted);
+      display: inline-flex; align-items: center; justify-content: center;
+      text-decoration: none; font-size: 1rem;
+      transition: all .2s;
+    }
+    .social-icon:hover { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+
+    /* ── Utility ─────────────────────────────────────────── */
+    @media (max-width: 767px) {
+      .hero { text-align: center; }
+      .hero-desc { margin-left: auto; margin-right: auto; }
+      .hero-actions { justify-content: center !important; }
+    }
+    .divider { height: 1px; background: var(--sp-border); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     NAVBAR
+═════════════════════════════════════════════════════════ -->
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+      <span class="pulse-dot brand-icon"><i class="bi bi-broadcast-pin"></i></span>
+      StreamPlayer
+    </a>
+    <button class="navbar-toggler border-0" type="button"
+            data-bs-toggle="collapse" data-bs-target="#navMenu"
+            aria-controls="navMenu" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="bi bi-list fs-4 text-secondary"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav ms-auto align-items-center gap-1">
+        <li class="nav-item"><a class="nav-link px-3" href="#features">Features</a></li>
+        <li class="nav-item"><a class="nav-link px-3" href="#download">Download</a></li>
+        <li class="nav-item"><a class="nav-link px-3" href="#settings">Settings</a></li>
+        <li class="nav-item ms-2">
+          <a class="btn btn-sm btn-outline-secondary px-3" href="https://github.com/codejq/live-player" target="_blank" rel="noopener">
+            <i class="bi bi-github me-1"></i>GitHub
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ════════════════════════════════════════════════════════
+     HERO
+═════════════════════════════════════════════════════════ -->
+<section class="hero" id="home">
+  <div class="container">
+    <div class="row align-items-center gy-5">
+
+      <!-- Left col -->
+      <div class="col-lg-6">
+        <!-- App icon (mobile only) -->
+        <div class="hero-app-icon d-lg-none">
+          <i class="bi bi-broadcast-pin"></i>
+        </div>
+
+        <div class="hero-badge">
+          <i class="bi bi-shield-fill-check"></i> Always-on Audio Streaming
+        </div>
+
+        <h1 class="hero-title mb-4">
+          Live radio that<br>
+          <span class="gradient-text">never stops playing</span>
+        </h1>
+
+        <p class="hero-desc mb-5">
+          StreamPlayer keeps your internet radio alive through crashes, network drops,
+          device reboots, Doze mode, and aggressive OEM battery killers.
+          Set it and forget it.
+        </p>
+
+        <div class="d-flex flex-wrap gap-3 hero-actions">
+          <a href="https://github.com/codejq/live-player/releases/latest"
+             class="btn-sp-primary" target="_blank" rel="noopener">
+            <i class="bi bi-download"></i> Download APK
+          </a>
+          <a href="fdroid/repo" class="btn-sp-fdroid">
+            <i class="fa-brands fa-android"></i> F-Droid Repo
+          </a>
+          <a href="https://github.com/codejq/live-player"
+             class="btn-sp-outline" target="_blank" rel="noopener">
+            <i class="bi bi-github"></i> Source
+          </a>
+        </div>
+
+        <p class="mt-4" style="font-size:.82rem; color:var(--sp-muted);">
+          <i class="bi bi-android2 me-1" style="color:var(--sp-accent);"></i>
+          Android 5.1+ &nbsp;·&nbsp; Free &amp; Open Source &nbsp;·&nbsp; No account required
+        </p>
+      </div>
+
+      <!-- Right col — big icon -->
+      <div class="col-lg-6 d-none d-lg-flex justify-content-center align-items-center">
+        <div class="hero-app-icon hero-app-icon-lg">
+          <i class="bi bi-broadcast-pin"></i>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     STATS BAR
+═════════════════════════════════════════════════════════ -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="row g-3 text-center">
+      <div class="col-6 col-sm-3">
+        <div class="stat-value">8–30s</div>
+        <div class="stat-label">Adaptive Buffer</div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="stat-value">2 min</div>
+        <div class="stat-label">Watchdog Cycle</div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="stat-value">API 22+</div>
+        <div class="stat-label">Android 5.1+</div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="stat-value">∞</div>
+        <div class="stat-label">Auto Retries</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     FEATURES
+═════════════════════════════════════════════════════════ -->
+<section id="features">
+  <div class="container">
+
+    <div class="text-center mb-5">
+      <p class="section-eyebrow">Built to survive</p>
+      <h2 class="section-title">Everything you need for<br>reliable live streaming</h2>
+      <p class="text-secondary mt-3" style="max-width:500px; margin:0 auto;">
+        Every edge case handled — from Samsung's battery killer to 3 AM network blips.
+      </p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-purple"><i class="bi bi-play-circle-fill"></i></div>
+          <h3>HLS Live Streaming</h3>
+          <p>ExoPlayer (Media3) with full HLS support and OkHttp networking for any live audio stream URL.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-cyan"><i class="bi bi-bell-fill"></i></div>
+          <h3>Foreground Service</h3>
+          <p>Persistent media-style notification with Play/Stop controls. Android cannot kill it silently.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-green"><i class="bi bi-power"></i></div>
+          <h3>Auto-start on Boot</h3>
+          <p>BootReceiver intercepts BOOT_COMPLETED and restarts your stream automatically after every reboot.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-orange"><i class="bi bi-arrow-repeat"></i></div>
+          <h3>Dual Watchdogs</h3>
+          <p>AlarmManager (2 min, Doze-resistant) + WorkManager (15 min) restart the stream after any crash.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-blue"><i class="bi bi-wifi"></i></div>
+          <h3>Network Recovery</h3>
+          <p>Detects when connectivity is restored and reconnects instantly — no manual action required.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-pink"><i class="bi bi-headphones"></i></div>
+          <h3>Headphone Aware</h3>
+          <p>Pauses automatically when headphones or Bluetooth audio devices are disconnected.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-yellow"><i class="bi bi-battery-charging"></i></div>
+          <h3>Battery Optimised</h3>
+          <p>Doze-resistant setExactAndAllowWhileIdle() alarms. Handles Samsung and other aggressive OEMs.</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="feature-card">
+          <div class="feat-icon fi-teal"><i class="bi bi-sliders"></i></div>
+          <h3>Per-app Volume</h3>
+          <p>Independent 1–100% volume. Plays alongside GPS, music, or calls without claiming audio focus.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     DOWNLOAD
+═════════════════════════════════════════════════════════ -->
+<section id="download" class="dl-section">
+  <div class="container">
+
+    <div class="text-center mb-5">
+      <p class="section-eyebrow">Get the app</p>
+      <h2 class="section-title">Download StreamPlayer</h2>
+      <p class="text-secondary mt-3">Free, open source, no account required.</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+      <!-- Direct APK -->
+      <div class="col-md-5">
+        <div class="dl-card featured h-100 d-flex flex-column">
+          <div class="d-flex align-items-start justify-content-between mb-3">
+            <span class="featured-pill">Recommended</span>
+            <i class="bi bi-download fs-3" style="color:var(--sp-primary-lt);"></i>
+          </div>
+          <h3 class="fw-bold mb-2">Direct APK</h3>
+          <p class="text-secondary mb-4" style="font-size:.9rem;">
+            Download the latest signed APK directly from GitHub Releases.
+            No store, no account.
+          </p>
+          <ol class="text-secondary mb-4 ps-3" style="font-size:.87rem; line-height:1.9;">
+            <li>Tap the button below to open the latest release</li>
+            <li>Download the <code>.apk</code> file</li>
+            <li>Enable <em>Install unknown apps</em> for your browser</li>
+            <li>Open the APK and install</li>
+          </ol>
+          <a href="https://github.com/codejq/live-player/releases/latest"
+             class="btn-sp-primary mt-auto justify-content-center"
+             style="width:100%;" target="_blank" rel="noopener">
+            <i class="bi bi-download"></i> Download Latest APK
+          </a>
+        </div>
+      </div>
+
+      <!-- F-Droid -->
+      <div class="col-md-5">
+        <div class="dl-card h-100 d-flex flex-column">
+          <div class="d-flex align-items-start justify-content-between mb-3">
+            <span style="font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--sp-muted);">F-Droid</span>
+            <i class="fa-brands fa-android fs-3" style="color:#4ade80;"></i>
+          </div>
+          <h3 class="fw-bold mb-2">F-Droid Repo</h3>
+          <p class="text-secondary mb-3" style="font-size:.9rem;">
+            Add our self-hosted F-Droid repository for automatic updates via the F-Droid app.
+          </p>
+          <p class="fw-semibold mb-2" style="font-size:.85rem;">Add this URL in F-Droid → Repositories:</p>
+          <div class="repo-url-strip mb-4">
+            <code id="fdroid-url">https://codejq.github.io/live-player/fdroid/repo</code>
+            <button class="copy-btn" id="copyBtn" title="Copy URL" aria-label="Copy F-Droid repo URL">
+              <i class="bi bi-clipboard" id="copyIcon"></i>
+            </button>
+          </div>
+          <a href="fdroid/repo" class="btn-sp-fdroid mt-auto justify-content-center" style="width:100%;">
+            <i class="fa-brands fa-android"></i> Open F-Droid Repo
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     SETTINGS REFERENCE
+═════════════════════════════════════════════════════════ -->
+<section id="settings">
+  <div class="container">
+
+    <div class="text-center mb-5">
+      <p class="section-eyebrow">Configuration</p>
+      <h2 class="section-title">Settings Reference</h2>
+      <p class="text-secondary mt-3">
+        Tap <strong>Settings</strong> in the app to configure all options.
+      </p>
+    </div>
+
+    <div class="settings-wrap">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th class="ps-4 py-3">Setting</th>
+              <th class="py-3">Default</th>
+              <th class="pe-4 py-3">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Stream Name</td>
+              <td class="py-3"><span class="code-chip">Live Stream</span></td>
+              <td class="pe-4 py-3">Display name shown in the notification bar.</td>
+            </tr>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Stream URL</td>
+              <td class="py-3"><span class="code-chip">radiojar default</span></td>
+              <td class="pe-4 py-3">Full HTTP(S) URL of the audio stream to play.</td>
+            </tr>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Auto-start on Boot</td>
+              <td class="py-3">
+                <span class="badge-default"><i class="bi bi-check-circle-fill"></i> Enabled</span>
+              </td>
+              <td class="pe-4 py-3">Starts the stream automatically when the device reboots.</td>
+            </tr>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Auto-relaunch if Stopped</td>
+              <td class="py-3">
+                <span class="badge-default"><i class="bi bi-check-circle-fill"></i> Enabled</span>
+              </td>
+              <td class="pe-4 py-3">Watchdogs restart the stream after crashes, network loss, or unexpected stops.</td>
+            </tr>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Reconnect Delay</td>
+              <td class="py-3"><span class="code-chip">5 s</span></td>
+              <td class="pe-4 py-3">Base delay before the first reconnect attempt (uses exponential backoff).</td>
+            </tr>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Max Retries</td>
+              <td class="py-3"><span class="code-chip">−1 (∞)</span></td>
+              <td class="pe-4 py-3">Maximum reconnect attempts. <code>−1</code> retries forever.</td>
+            </tr>
+            <tr>
+              <td class="ps-4 py-3 fw-semibold">Playback Volume</td>
+              <td class="py-3"><span class="code-chip">100%</span></td>
+              <td class="pe-4 py-3">App-level volume (1–100%), independent of the system volume.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     FOOTER
+═════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="row gy-4 mb-5">
+
+      <!-- Brand -->
+      <div class="col-lg-4">
+        <div class="footer-brand d-flex align-items-center gap-2 mb-2">
+          <i class="bi bi-broadcast-pin" style="color:var(--sp-accent);"></i> StreamPlayer
+        </div>
+        <p class="text-secondary mb-3" style="font-size:.87rem; max-width:270px; line-height:1.7;">
+          Resilient live audio streaming for Android. Open source, free forever.
+        </p>
+        <div class="d-flex gap-2">
+          <a href="https://github.com/codejq/live-player" class="social-icon" target="_blank" rel="noopener" title="GitHub">
+            <i class="bi bi-github"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- App links -->
+      <div class="col-6 col-sm-4 col-lg-2 offset-lg-2">
+        <h6 class="text-secondary fw-bold mb-3" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em;">App</h6>
+        <ul class="list-unstyled m-0">
+          <li class="mb-2"><a href="#features" class="footer-link">Features</a></li>
+          <li class="mb-2"><a href="#download" class="footer-link">Download</a></li>
+          <li class="mb-2"><a href="#settings" class="footer-link">Settings</a></li>
+        </ul>
+      </div>
+
+      <!-- Project links -->
+      <div class="col-6 col-sm-4 col-lg-2">
+        <h6 class="text-secondary fw-bold mb-3" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em;">Project</h6>
+        <ul class="list-unstyled m-0">
+          <li class="mb-2">
+            <a href="https://github.com/codejq/live-player/releases" class="footer-link" target="_blank" rel="noopener">Releases</a>
+          </li>
+          <li class="mb-2">
+            <a href="https://github.com/codejq/live-player/issues" class="footer-link" target="_blank" rel="noopener">Report a Bug</a>
+          </li>
+          <li class="mb-2">
+            <a href="fdroid/repo" class="footer-link">F-Droid Repo</a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Requirements -->
+      <div class="col-sm-4 col-lg-2">
+        <h6 class="text-secondary fw-bold mb-3" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em;">Requirements</h6>
+        <ul class="list-unstyled m-0" style="font-size:.87rem;">
+          <li class="mb-2 text-secondary">
+            <i class="bi bi-android2 me-1" style="color:var(--sp-accent);"></i> Android 5.1+
+          </li>
+          <li class="mb-2 text-secondary">
+            <i class="bi bi-wifi me-1" style="color:var(--sp-accent);"></i> Internet access
+          </li>
+          <li class="mb-2 text-secondary">
+            <i class="bi bi-file-earmark-text me-1" style="color:var(--sp-accent);"></i> MIT License
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="divider mb-4"></div>
+
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
+      <p class="m-0 text-secondary" style="font-size:.83rem;">
+        &copy; 2024 StreamPlayer &mdash; MIT License.
+      </p>
+      <p class="m-0 text-secondary" style="font-size:.83rem;">
+        Built with <i class="bi bi-heart-fill text-danger mx-1"></i> for reliable radio streaming.
+      </p>
+    </div>
+  </div>
+</footer>
+
+
+<!-- Bootstrap 5.3.3 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // ── Copy F-Droid URL to clipboard ─────────────────────────────────────────
+  const copyBtn  = document.getElementById('copyBtn');
+  const copyIcon = document.getElementById('copyIcon');
+  const fdroidUrl = document.getElementById('fdroid-url').textContent.trim();
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(fdroidUrl).then(() => {
+      copyBtn.classList.add('copied');
+      copyIcon.className = 'bi bi-clipboard-check';
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyIcon.className = 'bi bi-clipboard';
+      }, 2000);
+    });
+  });
+
+  // ── Smooth active nav highlight on scroll ─────────────────────────────────
+  const sections = document.querySelectorAll('section[id], .dl-section[id]');
+  const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => {
+          a.style.color = a.getAttribute('href') === '#' + entry.target.id
+            ? 'var(--sp-text)'
+            : '';
+        });
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

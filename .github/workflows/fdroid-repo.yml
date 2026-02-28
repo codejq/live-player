@@ -6,10 +6,11 @@ name: F-Droid Repository
 # How it works:
 #   1. Downloads the signed APK from the GitHub Release.
 #   2. Uses fdroidserver to generate a proper F-Droid repo index (index.xml / index-v1.jar).
-#   3. Deploys the repo to GitHub Pages under /fdroid/repo/.
+#   3. Commits the result to docs/fdroid/ on master — served by GitHub Pages at:
+#        https://<owner>.github.io/<repo>/fdroid/repo
 #
 # Users add this URL to their F-Droid app:
-#   https://<owner>.github.io/<repo>/fdroid/repo
+#   https://codejq.github.io/live-player/fdroid/repo
 #
 # Required GitHub Secrets:
 #   FDROID_KEYSTORE_BASE64  — Base64-encoded JKS keystore used to sign the repo index.
@@ -25,8 +26,8 @@ name: F-Droid Repository
 #     Linux/macOS:  base64 -w 0 fdroid.jks
 #     Windows PS:   [Convert]::ToBase64String([IO.File]::ReadAllBytes("fdroid.jks"))
 #
-# After the first successful deploy, enable GitHub Pages:
-#   Settings → Pages → Source: Deploy from branch → Branch: gh-pages / root
+# GitHub Pages setup (one-time):
+#   Settings → Pages → Source: Deploy from branch → Branch: master → Folder: /docs
 
 on:
   release:
@@ -38,36 +39,38 @@ jobs:
     name: Update F-Droid Repo
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # required to push to the gh-pages branch
+      contents: write   # required to push docs/fdroid/ back to master
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      # ── 1. Checkout (with write token so we can push back) ────────────────
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 2. Install fdroidserver ───────────────────────────────────────────────
+      # ── 2. Install fdroidserver ───────────────────────────────────────────
       - name: Install fdroidserver
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y libmagic1 aapt
           pip install fdroidserver
 
-      # ── 3. Prepare repo structure ─────────────────────────────────────────────
+      # ── 3. Prepare working directories ───────────────────────────────────
       - name: Prepare directories
-        run: mkdir -p fdroid/repo fdroid/metadata
+        run: mkdir -p fdroid-work/repo fdroid-work/metadata
 
-      # ── 4. Restore F-Droid repo signing key ──────────────────────────────────
+      # ── 4. Restore F-Droid repo signing key ──────────────────────────────
       - name: Restore F-Droid keystore
         run: |
-          echo "${{ secrets.FDROID_KEYSTORE_BASE64 }}" | base64 --decode > fdroid/keystore.jks
+          echo "${{ secrets.FDROID_KEYSTORE_BASE64 }}" | base64 --decode > fdroid-work/keystore.jks
 
-      # ── 5. Write fdroid config ────────────────────────────────────────────────
+      # ── 5. Write fdroid config ────────────────────────────────────────────
       - name: Write fdroid config
         env:
           PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
         run: |
           REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo"
-          cat > fdroid/config.yml << EOF
+          cat > fdroid-work/config.yml << EOF
           repo_url: "${REPO_URL}"
           repo_name: "StreamPlayer"
           repo_description: "StreamPlayer — live internet radio for Android"
@@ -79,10 +82,10 @@ jobs:
           keydname: "CN=StreamPlayer F-Droid Repo"
           EOF
 
-      # ── 6. Write app metadata ─────────────────────────────────────────────────
+      # ── 6. Write app metadata ─────────────────────────────────────────────
       - name: Write app metadata
         run: |
-          cat > fdroid/metadata/com.streamplayer.app.yml << 'EOF'
+          cat > fdroid-work/metadata/com.streamplayer.app.yml << 'EOF'
           Categories:
             - Multimedia
           License: MIT
@@ -96,7 +99,7 @@ jobs:
             network auto-recovery, and adaptive 8-30s buffering.
           EOF
 
-      # ── 7. Download signed APK from GitHub Release ────────────────────────────
+      # ── 7. Download signed APK from GitHub Release ────────────────────────
       - name: Download APK from release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,27 +111,39 @@ jobs:
           fi
           gh release download "$TAG" \
             --pattern "StreamPlayer-*.apk" \
-            --dir fdroid/repo
+            --dir fdroid-work/repo
 
-      # ── 8. Build F-Droid repo index ───────────────────────────────────────────
+      # ── 8. Build F-Droid repo index ───────────────────────────────────────
       - name: Build F-Droid repo index
         run: |
-          cd fdroid
+          cd fdroid-work
           fdroid update -c
 
-      # ── 9. Remove keystore before publishing ──────────────────────────────────
+      # ── 9. Remove keystore before committing ─────────────────────────────
       - name: Remove keystore
         if: always()
-        run: rm -f fdroid/keystore.jks
+        run: rm -f fdroid-work/keystore.jks
 
-      # ── 10. Deploy to GitHub Pages ────────────────────────────────────────────
-      #  Pushes the fdroid/ directory to the gh-pages branch under /fdroid/.
-      #  Final F-Droid repo URL: https://<owner>.github.io/<repo>/fdroid/repo
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: fdroid
-          publish_branch: gh-pages
-          destination_dir: fdroid
-          keep_files: true
+      # ── 10. Copy repo output to docs/fdroid/ and commit to master ─────────
+      #  GitHub Pages serves docs/ from the master branch, so the F-Droid
+      #  repo is available at /fdroid/repo alongside the homepage.
+      - name: Publish to docs/fdroid/
+        run: |
+          mkdir -p docs/fdroid/repo docs/fdroid/metadata
+
+          # Copy generated repo files (APKs + index)
+          cp -r fdroid-work/repo/. docs/fdroid/repo/
+
+          # Commit and push back to master
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/fdroid/
+
+          if git diff --staged --quiet; then
+            echo "F-Droid repo is already up-to-date — nothing to commit."
+          else
+            git commit -m "chore: update F-Droid repo [skip ci]"
+            git pull --rebase origin master
+            git push origin master
+          fi
