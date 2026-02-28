@@ -43,7 +43,7 @@ jobs:
     name: Update F-Droid Repo
     runs-on: ubuntu-latest
     # Only run when the upstream workflow succeeded (skip on failure / cancel)
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: write   # required to push docs/fdroid/ back to master
 
