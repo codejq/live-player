@@ -1,0 +1,14 @@
+Resilient Android background audio streaming for live internet radio.
+Survives crashes, network drops, device reboots, Doze mode, and aggressive
+OEM battery killers.
+
+Features:
+
+* Foreground service with persistent notification and media controls
+* Adaptive HLS buffering (8–30 seconds) for reliable live stream playback
+* Dual-watchdog restart engine: AlarmManager (2-min) + WorkManager (15-min)
+* Auto-start on device boot (user-configurable, default enabled)
+* Auto-relaunch if stopped by the OS (user-configurable, default enabled)
+* Automatic network recovery on reconnect
+* Doze mode and OEM battery killer resistance
+* No ads, no tracking, no analytics

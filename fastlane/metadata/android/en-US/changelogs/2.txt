@@ -1,0 +1,2 @@
+Initial release — live internet radio foreground streaming with dual-watchdog
+restart, adaptive buffering, auto-start on boot, and network auto-recovery.
