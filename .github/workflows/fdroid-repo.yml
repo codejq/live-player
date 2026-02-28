@@ -30,14 +30,20 @@ name: F-Droid Repository
 #   Settings → Pages → Source: Deploy from branch → Branch: master → Folder: /docs
 
 on:
-  release:
-    types: [published]
+  # Fires when "Build & Release" completes — avoids the GitHub limitation
+  # where releases created via GITHUB_TOKEN don't trigger `release:` events
+  # in other workflows.
+  workflow_run:
+    workflows: ["Build & Release"]
+    types: [completed]
   workflow_dispatch:
 
 jobs:
   update-fdroid-repo:
     name: Update F-Droid Repo
     runs-on: ubuntu-latest
+    # Only run when the upstream workflow succeeded (skip on failure / cancel)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write   # required to push docs/fdroid/ back to master
 
@@ -104,11 +110,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          # Fall back to latest release when triggered via workflow_dispatch
-          if [ -z "$TAG" ]; then
-            TAG=$(gh release view --json tagName -q .tagName)
-          fi
+          # Always fetch the latest published release tag
+          # (works for workflow_run, workflow_dispatch, and any future triggers)
+          TAG=$(gh release view --json tagName -q .tagName)
           gh release download "$TAG" \
             --pattern "StreamPlayer-*.apk" \
             --dir fdroid-work/repo
