@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://codejq.github.io/live-player/sitemap.xml
