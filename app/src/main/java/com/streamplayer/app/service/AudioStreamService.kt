@@ -4,6 +4,8 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioManager
+import android.media.audiofx.LoudnessEnhancer
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Handler
@@ -26,7 +28,10 @@ import com.streamplayer.app.receiver.NetworkReceiver
 import com.streamplayer.app.receiver.RestartReceiver
 import com.streamplayer.app.repository.StreamRepository
 import okhttp3.OkHttpClient
+import java.security.cert.CertPathValidatorException
+import java.security.cert.CertificateException
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLException
 
 /**
  * Core foreground service for background audio streaming.
@@ -61,6 +66,15 @@ class AudioStreamService : LifecycleService() {
 
         /** Force-clear isRestarting if prepare() never reaches STATE_BUFFERING. */
         private const val RESTARTING_TIMEOUT_MS = 15_000L
+
+        /**
+         * Make-up gain (millibels; 100 mB = 1 dB) applied via LoudnessEnhancer at volume 100%.
+         * Android's "safe media volume" caps a headset/Bluetooth output roughly 6 dB below the
+         * real maximum. ~+8 dB of digital boost more than restores that gap so the stream is
+         * audibly at full output, while the LoudnessEnhancer's built-in limiter guards clipping.
+         * The boost scales linearly with the user's volume setting (so 50% ≈ +4 dB, etc.).
+         */
+        private const val HEADSET_BOOST_MILLIBELS = 800
     }
 
     private lateinit var player: ExoPlayer
@@ -68,10 +82,15 @@ class AudioStreamService : LifecycleService() {
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var networkReceiver: NetworkReceiver
     private lateinit var noisyReceiver: BecomingNoisyReceiver
+    /** Digital boost effect that lets us exceed the headset safe-volume cap without
+     *  touching setStreamVolume (so no system "high volume" warning is ever shown). */
+    private var loudnessEnhancer: LoudnessEnhancer? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private var retryCount = 0
     private var isIntentionallyStopped = false
+    private var currentPlaybackUrl: String? = null
+    private var usedSslFallbackForCurrentConfig = false
     /** true while play() transitions stop→prepare; suppresses spurious STATE_IDLE retries. */
     private var isRestarting = false
     private var noisyRegistered = false
@@ -112,6 +131,7 @@ class AudioStreamService : LifecycleService() {
                     (player.playbackState == Player.STATE_READY && player.isPlaying)
                 if (!alreadyActive) {
                     retryCount = 0
+                    usedSslFallbackForCurrentConfig = false
                     play()
                 }
             }
@@ -131,6 +151,7 @@ class AudioStreamService : LifecycleService() {
                     isIntentionallyStopped = false
                     repo.setUserWantsPlaying(true)
                     retryCount = 0
+                    usedSslFallbackForCurrentConfig = false
                     play()
                 }
             }
@@ -164,6 +185,8 @@ class AudioStreamService : LifecycleService() {
         handler.removeCallbacksAndMessages(null)
         unregisterNetworkReceiver()
         unregisterNoisyReceiver()
+        try { loudnessEnhancer?.release() } catch (_: Exception) {}
+        loudnessEnhancer = null
         player.removeListener(playerListener)
         player.release()
         super.onDestroy()
@@ -209,14 +232,77 @@ class AudioStreamService : LifecycleService() {
                             // music, calls) without claiming exclusive speaker access.
                 )
             }
+
+        // Pin a stable audio session id so the LoudnessEnhancer stays attached for the
+        // player's whole lifetime (a session generated lazily on first playback could
+        // change across reconnects). API 21+ — min SDK here is 22.
+        try {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val sessionId = audioManager.generateAudioSessionId()
+            player.setAudioSessionId(sessionId)
+            loudnessEnhancer = LoudnessEnhancer(sessionId)
+        } catch (_: Exception) {
+            // Effect unsupported on this device — playback still works, just without boost.
+            loudnessEnhancer = null
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // Volume — bypasses the headset "safe media volume" cap without a warning dialog
+    // ─────────────────────────────────────────────
+
+    /**
+     * Applies the user's volume setting and forces true full output on headsets.
+     *
+     * A 3.5mm jack (even a passive speaker) or any Bluetooth device makes Android treat the
+     * output as "headphones" and cap STREAM_MUSIC at the safe-media-volume index, popping a
+     * hearing-damage warning if you try to exceed it. Two complementary steps fix that:
+     *
+     *  1. Raise STREAM_MUSIC to its real maximum (best effort) so the baseline isn't throttled.
+     *  2. Add make-up gain via LoudnessEnhancer, which boosts the decoded PCM directly and
+     *     never calls setStreamVolume — so the safe-volume cap AND its warning are bypassed.
+     */
+    private fun applyVolume() {
+        val vol = config.volume.coerceIn(1, 100)
+
+        // ExoPlayer software attenuation (0.01–1.0) — keeps the slider meaningful.
+        player.setVolume(vol / 100f)
+
+        raiseSystemMusicVolumeToMax()
+
+        loudnessEnhancer?.let { enhancer ->
+            try {
+                val gain = (HEADSET_BOOST_MILLIBELS * vol) / 100   // scales with the slider
+                enhancer.setTargetGain(gain)
+                enhancer.enabled = gain > 0
+            } catch (_: Exception) {
+                // Ignore — falls back to plain setVolume output.
+            }
+        }
+    }
+
+    /** Push the media stream to its hardware maximum. No FLAG_SHOW_UI, so the system volume
+     *  panel never appears; wrapped because some OEM/Doze states reject the change. */
+    private fun raiseSystemMusicVolumeToMax() {
+        try {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) < max) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, max, 0)
+            }
+        } catch (_: Exception) {
+            // SecurityException (e.g. DND/zen restrictions) — non-fatal.
+        }
     }
 
     // ─────────────────────────────────────────────
     // Playback Control
     // ─────────────────────────────────────────────
 
-    private fun play() {
+    private fun play(urlOverride: String? = null) {
         config = StreamRepository(this).load()
+        val playbackUrl = urlOverride ?: config.url
+        currentPlaybackUrl = playbackUrl
 
         // Cancel ALL pending callbacks (duplicate retries, stale timeouts).
         // Safe here because play() is the authoritative "start fresh" entry point.
@@ -226,11 +312,11 @@ class AudioStreamService : LifecycleService() {
         restartingTimeoutRunnable = null
         focusLossRetryRunnable    = null
 
-        // Apply saved volume (1–100 → 0.01–1.0). Independent of system / Bluetooth volume knob.
-        player.setVolume(config.volume.coerceIn(1, 100) / 100f)
+        // Apply saved volume and force true full output even on a capped headset/Bluetooth route.
+        applyVolume()
 
         val mediaItem = MediaItem.Builder()
-            .setUri(config.url)
+            .setUri(playbackUrl)
             .setLiveConfiguration(
                 MediaItem.LiveConfiguration.Builder()
                     .setMaxPlaybackSpeed(1f)
@@ -326,6 +412,14 @@ class AudioStreamService : LifecycleService() {
             isRestarting = false
             cancelAllTimeouts()
             if (!isIntentionallyStopped) {
+                val fallbackUrl = currentPlaybackUrl?.let {
+                    StreamConfig.sslFallbackUrlForPlayback(it, Build.VERSION.SDK_INT)
+                }
+                if (!usedSslFallbackForCurrentConfig && fallbackUrl != null && hasSslTrustFailure(error)) {
+                    usedSslFallbackForCurrentConfig = true
+                    play(fallbackUrl)
+                    return
+                }
                 updateNotification(isPlaying = false)
                 broadcastState(isPlaying = false)
                 scheduleRetry()
@@ -357,6 +451,17 @@ class AudioStreamService : LifecycleService() {
                 }.also { handler.postDelayed(it, 10_000L) }
             }
         }
+    }
+
+    private fun hasSslTrustFailure(error: Throwable): Boolean {
+        var cause: Throwable? = error
+        while (cause != null) {
+            if (cause is SSLException || cause is CertPathValidatorException || cause is CertificateException) {
+                return true
+            }
+            cause = cause.cause
+        }
+        return false
     }
 
     // ─────────────────────────────────────────────

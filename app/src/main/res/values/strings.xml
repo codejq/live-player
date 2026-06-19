@@ -37,4 +37,8 @@
 
     <!-- Accessibility -->
     <string name="radio_icon_description">Radio icon</string>
+
+    <!-- Footer / credits -->
+    <string name="version_format">Version %1$s</string>
+    <string name="made_by">Made by quantum-billing.com</string>
 </resources>

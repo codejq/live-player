@@ -7,6 +7,7 @@ lifecycle = "2.8.6"
 coroutines = "1.8.1"
 appcompat = "1.7.0"
 material = "1.12.0"
+junit = "4.13.2"
 
 [libraries]
 media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
@@ -23,6 +24,7 @@ appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "a
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity-ktx = { group = "androidx.activity", name = "activity-ktx", version = "1.9.3" }
 media-compat = { group = "androidx.media", name = "media", version = "1.7.0" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

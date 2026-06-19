@@ -24,5 +24,18 @@ data class StreamConfig(
         // OkHttp follows the redirect transparently. Do NOT use the n12/n13 tokenized URLs as defaults.
         const val DEFAULT_URL = "https://stream.radiojar.com/8s5u5tpdtwzuv"
         const val DEFAULT_NAME = "Live Stream"
+
+        fun normalizeStreamUrl(url: String): String = url.trim()
+
+        fun sslFallbackUrlForPlayback(url: String, sdkInt: Int): String? {
+            val trimmed = url.trim()
+            if (sdkInt >= 30 || !trimmed.startsWith("https://")) return null
+            val host = trimmed.substringAfter("https://").substringBefore('/').lowercase()
+            if (!isTrustedFallbackHost(host)) return null
+            return "http://" + trimmed.removePrefix("https://")
+        }
+
+        private fun isTrustedFallbackHost(host: String): Boolean =
+            host == "radiojar.com" || host.endsWith(".radiojar.com")
     }
 }

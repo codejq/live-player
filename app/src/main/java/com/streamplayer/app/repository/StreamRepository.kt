@@ -13,7 +13,7 @@ class StreamRepository(context: Context) {
 
     fun save(config: StreamConfig) {
         prefs.edit()
-            .putString(KEY_URL, config.url)
+            .putString(KEY_URL, StreamConfig.normalizeStreamUrl(config.url))
             .putString(KEY_NAME, config.name)
             .putBoolean(KEY_AUTO_BOOT, config.autoStartOnBoot)
             .putBoolean(KEY_AUTO_RELAUNCH, config.autoRelaunch)
@@ -26,7 +26,7 @@ class StreamRepository(context: Context) {
     fun load(): StreamConfig {
         val defaults = StreamConfig()
         return StreamConfig(
-            url = prefs.getString(KEY_URL, defaults.url) ?: defaults.url,
+            url = StreamConfig.normalizeStreamUrl(prefs.getString(KEY_URL, defaults.url) ?: defaults.url),
             name = prefs.getString(KEY_NAME, defaults.name) ?: defaults.name,
             autoStartOnBoot = prefs.getBoolean(KEY_AUTO_BOOT, defaults.autoStartOnBoot),
             autoRelaunch = prefs.getBoolean(KEY_AUTO_RELAUNCH, defaults.autoRelaunch),

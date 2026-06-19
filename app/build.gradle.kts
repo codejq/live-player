@@ -13,8 +13,8 @@ android {
         applicationId = "com.streamplayer.app"
         minSdk = 22
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
     }
 
     // Signing config — reads from local.properties (local dev) or env vars (CI/GitHub Actions).
@@ -96,4 +96,5 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity.ktx)
     implementation(libs.media.compat)    // androidx.media.app.NotificationCompat.MediaStyle
+    testImplementation(libs.junit)
 }

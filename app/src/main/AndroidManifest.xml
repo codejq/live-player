@@ -18,6 +18,11 @@
     <!-- Wake lock to keep CPU alive during playback -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Audio: raise the media stream volume and attach a LoudnessEnhancer effect so
+         playback reaches true 100% even on a 3.5mm / Bluetooth "headset" where Android
+         would otherwise cap output at the safe-media-volume level. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <!-- Battery optimization exemption request -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 

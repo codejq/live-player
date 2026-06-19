@@ -98,6 +98,14 @@ class MainActivity : AppCompatActivity() {
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+
+        // Show the installed app version in the footer (read from the package, no BuildConfig needed).
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        } catch (_: Exception) {
+            ""
+        }
+        binding.tvVersion.text = getString(R.string.version_format, versionName)
     }
 
     private fun observeViewModel() {
