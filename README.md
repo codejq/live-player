@@ -45,7 +45,7 @@ Open the app and tap the **Settings** button to configure:
 | Setting | Default | Description |
 | --- | --- | --- |
 | Stream Name | `Live Stream` | Display name shown in the notification |
-| Stream URL | radiojar default | Full HTTP(S) URL of the audio stream |
+| Stream URL | radiojar default | Full HTTP(S) URL of the audio stream; HTTP cleartext is allowed for any domain |
 | Auto-start on Boot | **Enabled** | Start the stream automatically after device reboot |
 | Auto-relaunch if Stopped | **Enabled** | Watchdogs automatically restart the stream after a crash, network loss, or stop |
 | Reconnect Delay | 5 s | Base delay before the first reconnect attempt |
